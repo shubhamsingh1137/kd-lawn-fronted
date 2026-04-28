@@ -23,8 +23,14 @@ function HeroSection({ data }) {
       style={{ backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center" }}
     >
       <div className="absolute inset-0 bg-black/55" />
-      <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
-        <p className="text-gold-light tracking-[0.3em] uppercase text-sm font-medium mb-4">{subtitle}</p>
+      <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+  <div className="inline-flex items-center gap-3 mb-5">
+  <span className="block w-8 h-px bg-yellow-400/70" />
+  <p className="text-yellow-400 tracking-[0.1em] uppercase text-xl md:text-2xl font-semibold">
+    {subtitle}
+  </p>
+  <span className="block w-8 h-px bg-yellow-400/70" />
+</div>
         <h1 className="text-4xl md:text-6xl font-serif font-bold leading-tight mb-6">{title}</h1>
         <p className="text-gray-200 text-lg mb-8 leading-relaxed">{desc}</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

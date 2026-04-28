@@ -27,6 +27,7 @@ import ManageContent     from "./pages/admin/ManageContent";
 import ManagePackages    from "./pages/admin/ManagePackages";
 import ManageUsers       from "./pages/admin/ManageUsers";
 import ManageTestimonials from "./pages/admin/ManageTestimonials";
+import WhatsAppButton from "./pages/WhatsAppButton";
 
 const PublicLayout = ({ children }) => (
   <>
@@ -67,6 +68,8 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
+      <WhatsAppButton />
     </AuthProvider>
+    
   );
 }

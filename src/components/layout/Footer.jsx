@@ -50,22 +50,22 @@ export default function Footer() {
           <ul className="space-y-3 text-sm text-gray-400">
             <li className="flex items-start gap-3">
               <FaMapMarkerAlt className="text-gold mt-0.5 shrink-0"/>
-              <span>123, Marriage Lawn Road, Kanpur, Uttar Pradesh - 208001</span>
+              <span>123, Marriage Lawn Road, Gorakhpur , Uttar Pradesh - 273008</span>
             </li>
             <li className="flex items-center gap-3">
               <FaPhone className="text-gold shrink-0"/>
-              <a href="tel:+919999999999" className="hover:text-gold">+91 99999 99999</a>
+              <a href="tel:+918808085237" className="hover:text-gold">+91 8808085237</a>
             </li>
             <li className="flex items-center gap-3">
               <FaEnvelope className="text-gold shrink-0"/>
-              <a href="mailto:info@kalawati.com" className="hover:text-gold">info@kalawati.com</a>
+              <a href="mailto:shubhamsingh1137@gmail.com" className="hover:text-gold">shubhamsingh1137@gmail.com</a>
             </li>
           </ul>
         </div>
       </div>
 
       <div className="border-t border-gray-800 py-5 text-center text-xs text-gray-500">
-        © {new Date().getFullYear()} Kalawati Marriage Lawn. All rights reserved.
+        © {new Date().getFullYear()} Pns Automation. All rights reserved.
       </div>
     </footer>
   );

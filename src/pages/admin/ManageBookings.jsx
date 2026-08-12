@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
@@ -12,6 +13,7 @@ const STATUS_COLORS = {
 };
 
 export default function ManageBookings() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("");
   const [selected, setSelected] = useState(null);
@@ -91,7 +93,7 @@ export default function ManageBookings() {
                   </td>
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => { setSelected(b); setNote(b.adminNote || ""); }}
+                      onClick={() => navigate(`/admin/bookings/${b._id}`)}
                       className="text-xs text-gold border border-gold px-3 py-1 rounded-lg hover:bg-gold hover:text-white transition-colors"
                     >
                       Manage

@@ -4,13 +4,13 @@ import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock, FaWhatsapp } from "react-
 import { MdEmail } from "react-icons/md";
 
 // ✅ EmailJS keys
-const EMAILJS_SERVICE_ID  = "service_zoubdii";
-const EMAILJS_TEMPLATE_ID = "template_glc7kyl";
-const EMAILJS_PUBLIC_KEY  = "hSSwdM3F79JmwXsTX";
+const EMAILJS_SERVICE_ID  = "service_u06oh5q";
+const EMAILJS_TEMPLATE_ID = "template_o7d70ym";
+const EMAILJS_PUBLIC_KEY  = "r3yw0W26c2k4WHhN1";
 
 // ✅ Admin details
-const ADMIN_WHATSAPP = "916393544576";
-const ADMIN_PHONE    = "916393544576";
+const ADMIN_WHATSAPP = "918808085237";
+const ADMIN_PHONE    = "918808085237";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
@@ -19,9 +19,9 @@ export default function Contact() {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = "Naam zaroori hai";
-    if (!/^\d{10}$/.test(form.phone.trim())) e.phone = "Valid 10-digit number daalo";
-    if (form.email && !/\S+@\S+\.\S+/.test(form.email)) e.email = "Valid email daalo";
+    if (!form.name.trim()) e.name = "Name is compulsory";
+    if (!/^\d{10}$/.test(form.phone.trim())) e.phone = "enter 10 digit valid number ";
+    if (form.email && !/\S+@\S+\.\S+/.test(form.email)) e.email = "enter valid email id ";
     return e;
   };
 
@@ -54,8 +54,8 @@ export default function Contact() {
   // 2️⃣ WhatsApp
   const sendToWhatsApp = () => {
     const text =
-      `🌸 *Naya Enquiry – Kalawati Marriage Lawn*\n\n` +
-      `👤 *Naam:* ${form.name}\n` +
+      `🌸 *New Enquiry – Kalawati Devi Utsav Lawn*\n\n` +
+      `👤 *Name:* ${form.name}\n` +
       `📱 *Phone:* ${form.phone}\n` +
       `📧 *Email:* ${form.email || "N/A"}\n` +
       `💬 *Message:* ${form.message || "N/A"}`;
@@ -107,9 +107,9 @@ const sendSMS = async () => {
           <h2 className="text-2xl font-serif font-bold text-gray-800 mb-6">Visit Us</h2>
           <div className="space-y-5">
             {[
-              { icon: <FaMapMarkerAlt className="text-gold" />, label: "Address", value: "123 Marriage Lawn Road, Kanpur, UP - 208001" },
-              { icon: <FaPhone className="text-gold" />,        label: "Phone",   value: "+91 99999 99999" },
-              { icon: <FaEnvelope className="text-gold" />,     label: "Email",   value: "info@kalawati.com" },
+              { icon: <FaMapMarkerAlt className="text-gold" />, label: "Address", value: "Teachers colony Gayatri nagar road kunraghat , Gorakhpur , Uttar Pradesh - 273008" },
+              { icon: <FaPhone className="text-gold" />,        label: "Phone",   value: "+91 8808085237" },
+              { icon: <FaEnvelope className="text-gold" />,     label: "Email",   value: "kdutsavlawn@gmail.com" },
               { icon: <FaClock className="text-gold" />,        label: "Hours",   value: "Mon–Sun: 9:00 AM – 9:00 PM" },
             ].map(({ icon, label, value }) => (
               <div key={label} className="flex items-start gap-4">
@@ -159,7 +159,7 @@ const sendSMS = async () => {
           {/* STEP 2 — Confirm */}
           {step === "confirm" && (
             <div className="space-y-5">
-              <h2 className="text-xl font-serif font-bold text-gray-800">Details sahi hain?</h2>
+              <h2 className="text-xl font-serif font-bold text-gray-800">Are details correct?</h2>
               <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm text-gray-700">
                 <p><span className="font-semibold">Naam:</span> {form.name}</p>
                 <p><span className="font-semibold">Phone:</span> {form.phone}</p>
@@ -227,7 +227,7 @@ const sendSMS = async () => {
             <div className="text-center space-y-4 py-6">
               <div className="text-4xl">⚠️</div>
               <h2 className="text-xl font-serif font-bold text-gray-800">Email not sent</h2>
-              <p className="text-gray-500 text-sm">EmailJS mein koi problem hai. Keys check karo.</p>
+              <p className="text-gray-500 text-sm">Problem in EmailJs , please check the keys.</p>
               <div className="flex gap-3 justify-center">
                 <button onClick={() => setStep("confirm")}
                   className="text-xs text-gray-400 underline">← Go back</button>

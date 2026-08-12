@@ -10,6 +10,7 @@ const links = [
   { to: "/booking", label: "Book Now"},
   { to: "/about",   label: "About"   },
   { to: "/contact", label: "Contact" },
+  { to: "/track-booking", label: "Track Booking" },
 ];
 
 const BookNowButton = ({ onClick }) => (
@@ -50,12 +51,12 @@ export default function Navbar() {
     <div className="flex items-center gap-3 md:gap-4">
       <a href="mailto:shubhamsingh1137@gmail.com" className="flex items-center gap-1 md:gap-2 hover:text-white transition-colors">
         <FaEnvelope size={12} />
-        <span className="hidden sm:inline">shubhamsingh1137@gmail.com</span>
+        <span className="hidden sm:inline">kdutsavlawn@gmail.com</span>
         <span className="sm:hidden">Email Us</span>
       </a>
       <span className="opacity-40">|</span>
       <a href="tel:+916393544576" className="flex items-center gap-1 md:gap-2 hover:text-white transition-colors">
-        <FaPhone size={12} /> +91 6393544576
+        <FaPhone size={12} /> +91 8808085237
       </a>
       <span className="opacity-40 hidden md:inline">|</span>
       <div className="hidden md:flex items-center gap-4">
@@ -101,7 +102,7 @@ export default function Navbar() {
                   KD Utsav Lawn
                 </p>
                 <p className="text-gray-500 text-[11px] tracking-[2px] uppercase mt-1.5 font-semibold text-center">
-                  Kalawati Devi Marriage Lawn
+                  Kalawati Devi Utasv Lawn
                 </p>
               </div>
             </Link>

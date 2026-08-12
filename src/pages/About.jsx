@@ -3,7 +3,7 @@ export default function About() {
     <div className="min-h-screen">
       <div className="bg-gray-900 text-white py-20 text-center">
         <p className="section-subtitle text-gold">Our Story</p>
-        <h1 className="section-title text-white">About Kalawati Marriage Lawn</h1>
+        <h1 className="section-title text-white">About Kalawati Utsav Lawn</h1>
       </div>
       <div className="max-w-4xl mx-auto px-4 py-16">
         <p className="text-gray-600 leading-relaxed text-lg mb-6">

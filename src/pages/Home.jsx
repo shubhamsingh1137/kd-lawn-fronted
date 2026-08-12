@@ -12,7 +12,7 @@ const fetchTestimonials = () => api.get("/content/testimonials").then(r => r.dat
 // ─── Section: Hero ────────────────────────────────────────────────────────────
 function HeroSection({ data }) {
   const title    = data?.title       || "Your Dream Wedding Starts Here";
-  const subtitle = data?.subtitle    || "Kalawati Marriage Lawn";
+  const subtitle = data?.subtitle    || "Kalawati Utasv Lawn";
   const desc     = data?.description || "A majestic venue where every celebration becomes an unforgettable memory.";
   const btnText  = data?.buttonText  || "Book Your Date";
   const bg       = data?.imageUrl    || "https://images.unsplash.com/photo-1519741497674-611481863552?w=1600";
@@ -46,8 +46,8 @@ function HeroSection({ data }) {
 
 // ─── Section: About ───────────────────────────────────────────────────────────
 function AboutSection({ data }) {
-  const title = data?.title       || "About Kalawati Marriage Lawn";
-  const desc  = data?.description || "With decades of experience hosting weddings and celebrations, Kalawati Marriage Lawn offers a breathtaking venue with world-class amenities, impeccable service, and unforgettable ambience.";
+  const title = data?.title       || "About Kalawati Utasv Lawn";
+  const desc  = data?.description || "With decades of experience hosting weddings and celebrations, Kalawati Utsav Lawn offers a breathtaking venue with world-class amenities, impeccable service, and unforgettable ambience.";
   const img   = data?.imageUrl    || "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800";
 
   return (

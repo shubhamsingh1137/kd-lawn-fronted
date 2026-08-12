@@ -14,6 +14,7 @@ import About    from "./pages/About";
 import Contact  from "./pages/Contact";
 import Login    from "./pages/Login";
 import Register from "./pages/Register";
+import OTPLogin from "./pages/OTPLogin";
 
 // User
 import UserDashboard from "./pages/UserDashboard";
@@ -26,8 +27,11 @@ import ManageGallery     from "./pages/admin/ManageGallery";
 import ManageContent     from "./pages/admin/ManageContent";
 import ManagePackages    from "./pages/admin/ManagePackages";
 import ManageUsers       from "./pages/admin/ManageUsers";
+import BookingDetails from "./pages/admin/BookingDetails";
 import ManageTestimonials from "./pages/admin/ManageTestimonials";
 import WhatsAppButton from "./pages/WhatsAppButton";
+import TrackBooking from "./pages/TrackBooking";
+import PaymentPage from "./pages/PaymentPage";
 
 const PublicLayout = ({ children }) => (
   <>
@@ -47,6 +51,9 @@ export default function App() {
         <Route path="/booking"  element={<PublicLayout><Booking /></PublicLayout>} />
         <Route path="/about"    element={<PublicLayout><About /></PublicLayout>} />
         <Route path="/contact"  element={<PublicLayout><Contact /></PublicLayout>} />
+        <Route path="/track-booking" element={<PublicLayout><TrackBooking /></PublicLayout>} /> 
+        <Route path="/pay/:bookingId" element={<PaymentPage />} />
+        <Route path="/otp-login" element={<OTPLogin />} />
         <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -60,6 +67,7 @@ export default function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index                  element={<AdminHome />} />
             <Route path="bookings"        element={<ManageBookings />} />
+            <Route path="bookings/:bookingId" element={<BookingDetails />} />
             <Route path="gallery"         element={<ManageGallery />} />
             <Route path="content"         element={<ManageContent />} />
             <Route path="packages"        element={<ManagePackages />} />

@@ -8,8 +8,8 @@ export default function Footer() {
 
         {/* Brand */}
         <div className="md:col-span-1">
-          <h2 className="text-gold text-2xl font-serif font-bold mb-2">Kalawati</h2>
-          <p className="text-xs tracking-widest uppercase text-gray-400 mb-4">Marriage Lawn</p>
+          <h2 className="text-gold text-2xl font-serif font-bold mb-2">KD Utsav Lawn</h2>
+          <p className="text-xs tracking-widest uppercase text-gray-400 mb-4">Kalawati Devi Utsav Lawn</p>
           <p className="text-sm text-gray-400 leading-relaxed">
             Creating beautiful memories for your most special day. A venue where traditions meet elegance.
           </p>
@@ -50,7 +50,7 @@ export default function Footer() {
           <ul className="space-y-3 text-sm text-gray-400">
             <li className="flex items-start gap-3">
               <FaMapMarkerAlt className="text-gold mt-0.5 shrink-0"/>
-              <span>123, Marriage Lawn Road, Gorakhpur , Uttar Pradesh - 273008</span>
+              <span>Teachers colony Gayatri nagar road kunraghat , Gorakhpur , Uttar Pradesh - 273008</span>
             </li>
             <li className="flex items-center gap-3">
               <FaPhone className="text-gold shrink-0"/>
@@ -58,7 +58,7 @@ export default function Footer() {
             </li>
             <li className="flex items-center gap-3">
               <FaEnvelope className="text-gold shrink-0"/>
-              <a href="mailto:shubhamsingh1137@gmail.com" className="hover:text-gold">shubhamsingh1137@gmail.com</a>
+              <a href="mailto:shubhamsingh1137@gmail.com" className="hover:text-gold">kdutsavlawn@gmail.com</a>
             </li>
           </ul>
         </div>

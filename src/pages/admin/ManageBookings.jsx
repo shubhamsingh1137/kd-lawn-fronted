@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import Swal from "sweetalert2";
 
 const STATUS_COLORS = {
-  pending:   "bg-yellow-100 text-yellow-700",
+  pending: "bg-yellow-100 text-yellow-700",
   confirmed: "bg-green-100 text-green-700",
-  rejected:  "bg-red-100 text-red-700",
+  rejected: "bg-red-100 text-red-700",
   cancelled: "bg-gray-100 text-gray-500",
   completed: "bg-blue-100 text-blue-700",
 };
@@ -15,140 +16,384 @@ const STATUS_COLORS = {
 export default function ManageBookings() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [note, setNote] = useState("");
 
-  const { data, isLoading } = useQuery(
+  const [statusFilter, setStatusFilter] = useState("");
+
+  // ==============================
+  // GET BOOKINGS
+  // ==============================
+  const { data, isLoading, isError } = useQuery(
     ["adminBookings", statusFilter],
-    () => api.get(`/bookings/admin/all${statusFilter ? `?status=${statusFilter}` : ""}`).then(r => r.data)
+    () =>
+      api
+        .get(
+          `/bookings/admin/all${
+            statusFilter ? `?status=${statusFilter}` : ""
+          }`
+        )
+        .then((res) => res.data)
   );
 
+  // ==============================
+  // UPDATE STATUS
+  // ==============================
   const updateStatus = useMutation(
-    ({ id, status, adminNote }) => api.patch(`/bookings/admin/${id}/status`, { status, adminNote }),
+    ({ id, status }) =>
+      api.patch(`/bookings/admin/${id}/status`, {
+        status,
+      }),
     {
       onSuccess: () => {
-        toast.success("Booking updated");
-        qc.invalidateQueries("adminBookings");
+        toast.success("Booking status updated");
+
+        qc.invalidateQueries(["adminBookings", statusFilter]);
         qc.invalidateQueries("bookingStats");
-        setSelected(null);
-        setNote("");
       },
-      onError: (err) => toast.error(err.response?.data?.message || "Update failed"),
+
+      onError: (error) => {
+        toast.error(
+          error.response?.data?.message ||
+            "Failed to update booking status"
+        );
+      },
     }
   );
+  const deleteBooking = useMutation(
+  (id) => api.delete(`/bookings/admin/${id}`),
+  {
+    onSuccess: () => {
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: "Booking has been permanently deleted.",
+        confirmButtonColor: "#c58b00",
+      });
 
-  const handleAction = (status) => {
-    updateStatus.mutate({ id: selected._id, status, adminNote: note });
+      qc.invalidateQueries(["adminBookings", statusFilter]);
+      qc.invalidateQueries("bookingStats");
+    },
+
+    onError: (error) => {
+      Swal.fire({
+        icon: "error",
+        title: "Delete Failed",
+        text:
+          error.response?.data?.message ||
+          "Unable to delete booking.",
+        confirmButtonColor: "#d33",
+      });
+    },
+  }
+);
+
+  // ==============================
+  // STATUS CHANGE
+  // ==============================
+  const handleStatusChange = (booking, newStatus) => {
+    if (!newStatus || newStatus === booking.status) {
+      return;
+    }
+
+    updateStatus.mutate({
+      id: booking._id,
+      status: newStatus,
+    });
   };
+  const handleDelete = async (booking) => {
+  const result = await Swal.fire({
+    title: "Are you sure?",
+    text: `Booking of ${booking.contactName} will be permanently deleted. This action cannot be undone.`,
+    icon: "warning",
+
+    showCancelButton: true,
+
+    confirmButtonText: "Yes, Delete Permanently",
+    cancelButtonText: "Cancel",
+
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#6b7280",
+
+    reverseButtons: true,
+  });
+
+  if (!result.isConfirmed) {
+    return;
+  }
+
+  deleteBooking.mutate(booking._id);
+};
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-serif font-bold text-gray-800">Manage Bookings</h1>
-        <div className="flex gap-2">
-          {["", "pending", "confirmed", "rejected", "cancelled", "completed"].map(s => (
+
+      {/* ==============================
+          HEADER
+      ============================== */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+
+        <h1 className="text-2xl font-serif font-bold text-gray-800">
+          Manage Bookings
+        </h1>
+
+        {/* FILTER */}
+        <div className="flex gap-2 flex-wrap">
+
+          {[
+            "",
+            "pending",
+            "confirmed",
+            "rejected",
+          ].map((status) => (
             <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors
-                ${statusFilter === s ? "bg-gold text-white" : "bg-white text-gray-600 hover:bg-gray-100 border"}`}
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
+                statusFilter === status
+                  ? "bg-gold text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100 border"
+              }`}
             >
-              {s || "All"}
+              {status || "All"}
             </button>
           ))}
+
         </div>
+
       </div>
 
-      {isLoading ? (
+
+      {/* ==============================
+          LOADING
+      ============================== */}
+      {isLoading && (
         <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-xl animate-pulse"/>)}
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {["Name","Event","Date","Package","Guests","Amount","Status","Action"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {data?.bookings?.map(b => (
-                <tr key={b._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-800">{b.contactName}</div>
-                    <div className="text-xs text-gray-400">{b.contactPhone}</div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{b.eventType}</td>
-                  <td className="px-4 py-3 text-gray-600">{new Date(b.eventDate).toLocaleDateString("en-IN")}</td>
-                  <td className="px-4 py-3 text-gray-600">{b.package?.name || "-"}</td>
-                  <td className="px-4 py-3 text-gray-600">{b.guestCount}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">₹{b.totalAmount?.toLocaleString("en-IN")}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[b.status]}`}>
-                      {b.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => navigate(`/admin/bookings/${b._id}`)}
-                      className="text-xs text-gold border border-gold px-3 py-1 rounded-lg hover:bg-gold hover:text-white transition-colors"
-                    >
-                      Manage
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!data?.bookings?.length && (
-            <p className="text-center py-12 text-gray-400">No bookings found.</p>
-          )}
+
+          {[1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="h-20 bg-white rounded-xl animate-pulse"
+            />
+          ))}
+
         </div>
       )}
 
-      {/* Modal */}
-      {selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Update Booking Status</h2>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm space-y-1">
-              <p><strong>Name:</strong> {selected.contactName}</p>
-              <p><strong>Event:</strong> {selected.eventType} on {new Date(selected.eventDate).toDateString()}</p>
-              <p><strong>Package:</strong> {selected.package?.name}</p>
-              <p><strong>Guests:</strong> {selected.guestCount}</p>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Admin Note (optional)</label>
-              <textarea
-                value={note} onChange={e => setNote(e.target.value)}
-                rows={2} placeholder="Add a note for the customer..."
-                className="input-field resize-none"
-              />
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              <button onClick={() => handleAction("confirmed")}
-                className="flex-1 bg-green-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-600">
-                Confirm
-              </button>
-              <button onClick={() => handleAction("rejected")}
-                className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-red-600">
-                Reject
-              </button>
-              <button onClick={() => handleAction("completed")}
-                className="flex-1 bg-blue-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-600">
-                Complete
-              </button>
-              <button onClick={() => setSelected(null)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">
-                Cancel
-              </button>
-            </div>
-          </div>
+
+      {/* ==============================
+          ERROR
+      ============================== */}
+      {isError && !isLoading && (
+        <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+
+          <p className="text-red-500">
+            Unable to load bookings.
+          </p>
+
+          <p className="text-sm text-gray-400 mt-2">
+            Please refresh the page and try again.
+          </p>
+
         </div>
       )}
+
+
+      {/* ==============================
+          TABLE
+      ============================== */}
+      {!isLoading && !isError && (
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full text-sm">
+
+              <thead className="bg-gray-50 border-b">
+
+                <tr>
+
+                  {[
+                    "Name",
+                    "Event",
+                    "Date",
+                    "Package",
+                    "Guests",
+                    "Amount",
+                    "Status",
+                    "Action",
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap"
+                    >
+                      {heading}
+                    </th>
+                  ))}
+
+                </tr>
+
+              </thead>
+
+
+              <tbody className="divide-y">
+
+                {data?.bookings?.map((booking) => {
+
+                  const isConfirmed =
+                    booking.status === "confirmed";
+
+                  return (
+                    <tr
+                      key={booking._id}
+                      className="hover:bg-gray-50"
+                    >
+
+                      {/* NAME */}
+                      <td className="px-4 py-3">
+
+                        <div className="font-medium text-gray-800">
+                          {booking.contactName}
+                        </div>
+
+                        <div className="text-xs text-gray-400">
+                          {booking.contactPhone}
+                        </div>
+
+                      </td>
+
+
+                      {/* EVENT */}
+                      <td className="px-4 py-3 text-gray-600">
+                        {booking.eventType}
+                      </td>
+
+
+                      {/* DATE */}
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {new Date(
+                          booking.eventDate
+                        ).toLocaleDateString("en-IN")}
+                      </td>
+
+
+                      {/* PACKAGE */}
+                      <td className="px-4 py-3 text-gray-600">
+                        {booking.package?.name || "-"}
+                      </td>
+
+
+                      {/* GUESTS */}
+                      <td className="px-4 py-3 text-gray-600">
+                        {booking.guestCount}
+                      </td>
+
+
+                      {/* AMOUNT */}
+                      <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
+                        ₹
+                        {Number(
+                          booking.totalAmount || 0
+                        ).toLocaleString("en-IN")}
+                      </td>
+
+
+                      {/* ==============================
+                          STATUS DROPDOWN
+                      ============================== */}
+                      <td className="px-4 py-3">
+
+                        <select
+                          value={booking.status}
+                          disabled={updateStatus.isLoading}
+                          onChange={(e) =>
+                            handleStatusChange(
+                              booking,
+                              e.target.value
+                            )
+                          }
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize border-0 outline-none cursor-pointer ${
+                            STATUS_COLORS[
+                              booking.status
+                            ] ||
+                            "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          
+
+                          <option value="pending">
+                            Pending
+                          </option>
+
+                          <option value="confirmed">
+                            Confirmed
+                          </option>
+
+                          <option value="rejected">
+                            Rejected
+                          </option>
+
+                        </select>
+
+                      </td>
+
+{/* ==============================
+    ACTION BUTTONS
+============================== */}
+<td className="px-4 py-3">
+
+  <div className="flex items-center gap-2">
+
+    {/* MANAGE */}
+    <button
+      disabled={!isConfirmed}
+      onClick={() => {
+        if (!isConfirmed) return;
+
+        navigate(`/admin/bookings/${booking._id}`);
+      }}
+      className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+        isConfirmed
+          ? "text-gold border border-gold hover:bg-gold hover:text-white cursor-pointer"
+          : "text-gray-400 border border-gray-200 bg-gray-50 cursor-not-allowed"
+      }`}
+    >
+      {isConfirmed ? "Manage" : "Confirm First"}
+    </button>
+
+    {/* DELETE */}
+    <button
+      onClick={() => handleDelete(booking)}
+      disabled={deleteBooking.isLoading}
+      className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+    >
+      {deleteBooking.isLoading ? "Deleting..." : "Delete"}
+    </button>
+
+  </div>
+
+</td>
+
+                    </tr>
+                  );
+                })}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+
+          {/* EMPTY */}
+          {!data?.bookings?.length && (
+            <p className="text-center py-12 text-gray-400">
+              No bookings found.
+            </p>
+          )}
+
+
+        </div>
+      )}
+
     </div>
   );
 }

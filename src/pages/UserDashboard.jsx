@@ -249,7 +249,7 @@ export default function UserDashboard() {
           </div>
 
           <div class="row paid">
-            <span>Advance Paid</span>
+            <span>Total Paid</span>
             <span>₹${advanceAmount.toLocaleString("en-IN")}</span>
           </div>
 
@@ -448,7 +448,7 @@ export default function UserDashboard() {
           {/* ADVANCE */}
           <div className="bg-green-50 rounded-xl p-4">
             <p className="text-xs text-green-600 uppercase">
-              Advance Paid
+              Total Paid
             </p>
 
             <p className="text-lg font-bold text-green-700 mt-1">
@@ -506,7 +506,7 @@ export default function UserDashboard() {
             {isFullyPaid
               ? "Fully Paid"
               : advanceAmount > 0
-              ? "Advance Paid"
+              ? "Partially Paid"
               : "Payment Pending"}
           </span>
 

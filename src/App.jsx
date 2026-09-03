@@ -15,6 +15,7 @@ import Contact  from "./pages/Contact";
 import Login    from "./pages/Login";
 import Register from "./pages/Register";
 import OTPLogin from "./pages/OTPLogin";
+import Chatbot from "./components/chatbot/Chatbot";
 
 // User
 import UserDashboard from "./pages/UserDashboard";
@@ -77,6 +78,7 @@ export default function App() {
         </Route>
       </Routes>
       <WhatsAppButton />
+      <Chatbot />
     </AuthProvider>
     
   );

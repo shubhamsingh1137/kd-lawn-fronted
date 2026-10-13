@@ -29,3 +29,22 @@
   }
   .card { @apply bg-white rounded-xl shadow-md overflow-hidden; }
 }
+
+/* Hide scrollbars while keeping scrolling enabled */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* Chrome, Safari and Edge */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox and older Edge */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

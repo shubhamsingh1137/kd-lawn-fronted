@@ -24,20 +24,29 @@ import UserDashboard from "./pages/UserDashboard";
 import AdminLayout       from "./pages/admin/AdminLayout";
 import AdminHome         from "./pages/admin/AdminHome";
 import ManageBookings    from "./pages/admin/ManageBookings";
+import WalkInBooking from "./pages/admin/WalkInBooking";
 import ManageGallery     from "./pages/admin/ManageGallery";
 import ManageContent     from "./pages/admin/ManageContent";
 import ManagePackages    from "./pages/admin/ManagePackages";
+import ManageAnnouncements from "./pages/admin/ManageAnnouncements";
 import ManageUsers       from "./pages/admin/ManageUsers";
 import BookingDetails from "./pages/admin/BookingDetails";
+import AnnouncementBanner from "./pages/AnnouncementBanner";
 import ManageTestimonials from "./pages/admin/ManageTestimonials";
 import WhatsAppButton from "./pages/WhatsAppButton";
 import TrackBooking from "./pages/TrackBooking";
 import PaymentPage from "./pages/PaymentPage";
 
+
 const PublicLayout = ({ children }) => (
   <>
-    <Navbar />
+    <div className="fixed top-0 left-0 right-0 z-50 w-full">
+      <Navbar />
+      <AnnouncementBanner />
+    </div>
+
     <main>{children}</main>
+
     <Footer />
   </>
 );
@@ -69,11 +78,14 @@ export default function App() {
             <Route index                  element={<AdminHome />} />
             <Route path="bookings"        element={<ManageBookings />} />
             <Route path="bookings/:bookingId" element={<BookingDetails />} />
+              {/* Walk-in Booking */}
+            <Route path="walk-in-booking"     element={<WalkInBooking />} />
             <Route path="gallery"         element={<ManageGallery />} />
             <Route path="content"         element={<ManageContent />} />
             <Route path="packages"        element={<ManagePackages />} />
             <Route path="users"           element={<ManageUsers />} />
             <Route path="testimonials"    element={<ManageTestimonials />} />
+            <Route path="announcements" element={<ManageAnnouncements />} />
           </Route>
         </Route>
       </Routes>

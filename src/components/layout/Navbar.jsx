@@ -80,7 +80,7 @@ export default function Navbar() {
 </div>
 
       <nav
-        className={`sticky top-0 z-50 transition-all duration-300 ${
+        className={`relative z-50 transition-all duration-300 ${
           scrolled ? "bg-white shadow-lg" : "bg-white/95 backdrop-blur-sm shadow-md"
         }`}
       >

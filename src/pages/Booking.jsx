@@ -56,7 +56,7 @@ export default function Booking() {
         ...form,
         totalAmount: selectedPkg?.price || 0,
       });
-      toast.success("Booking submitted! We'll confirm within 24 hours.");
+      toast.success("Booking submitted! Confirmation will be sent to your email shortly.");
       navigate(isLoggedIn ? "/dashboard" : "/");
     } catch (err) {
       toast.error(err.response?.data?.message || "Booking failed");

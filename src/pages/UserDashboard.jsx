@@ -68,12 +68,21 @@ export default function UserDashboard() {
     return;
   }
 
-  const totalAmount = Number(booking.totalAmount || 0);
-  const advanceAmount = Number(booking.advanceAmount || 0);
-  const remainingAmount = Math.max(
-    totalAmount - advanceAmount,
-    0
-  );
+  
+
+
+
+const totalAmount = Number(booking.totalAmount || 0);
+const advanceAmount = Number(booking.advanceAmount || 0);
+const discountAmount = Number(booking.discountAmount || 0);
+
+const remainingAmount = Math.max(
+  totalAmount - advanceAmount,
+  0
+);
+
+
+
 
   billWindow.document.write(`
     <!DOCTYPE html>
@@ -244,9 +253,14 @@ export default function UserDashboard() {
           <h3>Payment Details</h3>
 
           <div class="row total">
-            <span>Total Bill</span>
+            <span>Payable Amount (After Discount)</span>
             <span>₹${totalAmount.toLocaleString("en-IN")}</span>
           </div>
+          <div class="row">
+  <span>Discount</span>
+  <span>- ₹${discountAmount.toLocaleString("en-IN")}</span>
+</div>
+          
 
           <div class="row paid">
             <span>Total Paid</span>
@@ -333,13 +347,16 @@ export default function UserDashboard() {
               <div className="space-y-4">
                 {bookings.map((b) => {
 
-  const totalAmount = Number(b.totalAmount || 0);
-  const advanceAmount = Number(b.advanceAmount || 0);
 
-  const remainingAmount = Math.max(
-    totalAmount - advanceAmount,
-    0
-  );
+const totalAmount = Number(b.totalAmount || 0);
+const advanceAmount = Number(b.advanceAmount || 0);
+const discountAmount = Number(b.discountAmount || 0);
+
+const remainingAmount = Math.max(
+  totalAmount - advanceAmount,
+  0
+);
+
 
   const isConfirmed =
     String(b.status || "").toLowerCase() === "confirmed";
@@ -432,18 +449,28 @@ export default function UserDashboard() {
           Payment Details
         </h4>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
 
-          {/* TOTAL */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs text-gray-400 uppercase">
-              Total Bill
-            </p>
+{/* TOTAL */}
+<div className="bg-gray-50 rounded-xl p-4">
+  <p className="text-xs text-gray-400 uppercase">
+  Payable Amount (After Discount)
+</p>
+  <p className="text-lg font-bold text-gray-800 mt-1">
+    ₹{totalAmount.toLocaleString("en-IN")}
+  </p>
+</div>
 
-            <p className="text-lg font-bold text-gray-800 mt-1">
-              ₹{totalAmount.toLocaleString("en-IN")}
-            </p>
-          </div>
+{/* DISCOUNT */}
+<div className="bg-red-50 rounded-xl p-4">
+  <p className="text-xs text-red-600 uppercase">
+    Discount
+  </p>
+  <p className="text-lg font-bold text-red-700 mt-1">
+    - ₹{discountAmount.toLocaleString("en-IN")}
+  </p>
+</div>
+
 
           {/* ADVANCE */}
           <div className="bg-green-50 rounded-xl p-4">
@@ -486,6 +513,7 @@ export default function UserDashboard() {
           </div>
 
         </div>
+        
 
         {/* PAYMENT STATUS */}
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -512,6 +540,89 @@ export default function UserDashboard() {
 
         </div>
 
+      </div>
+
+      {/* PAYMENT TRANSACTION HISTORY */}
+      <div className="mt-6 border-t pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-semibold text-gray-800">Payment History</h4>
+          <span className="text-xs text-gray-500">
+            {Array.isArray(b.paymentHistory) ? b.paymentHistory.length : 0}{" "}
+            Transaction
+            {Array.isArray(b.paymentHistory) && b.paymentHistory.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {!Array.isArray(b.paymentHistory) || b.paymentHistory.length === 0 ? (
+          <div className="bg-gray-50 rounded-xl p-5 text-center">
+            <p className="text-sm text-gray-500">No payment transactions yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {[...b.paymentHistory]
+              .sort((a, b) => new Date(b.paidAt || b.createdAt || 0) - new Date(a.paidAt || a.createdAt || 0))
+              .map((payment, index) => {
+                const paymentStatus = String(payment.status || "").toLowerCase();
+                const statusConfig = paymentStatus === "success"
+                  ? { label: "Successful", className: "bg-green-100 text-green-700" }
+                  : paymentStatus === "pending"
+                    ? { label: "Pending Verification", className: "bg-yellow-100 text-yellow-700" }
+                    : { label: "Rejected", className: "bg-red-100 text-red-700" };
+
+                const paymentMethod = payment.paymentMethod === "upi" ? "UPI"
+                  : payment.paymentMethod === "bank_transfer" ? "Bank Transfer"
+                  : payment.paymentMethod === "cash" ? "Cash"
+                  : payment.paymentMethod === "card" ? "Card"
+                  : payment.paymentMethod === "razorpay" ? "Razorpay"
+                  : payment.paymentMethod || "—";
+
+                const source = payment.source === "razorpay" ? "Online Payment"
+                  : payment.source === "manual" ? "Manual Payment"
+                  : payment.source || "—";
+
+                return (
+                  <div key={payment._id || index} className="border border-gray-200 rounded-xl p-4 bg-white">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-gray-800">Payment #{b.paymentHistory.length - index}</p>
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusConfig.className}`}>
+                            {statusConfig.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {payment.paidAt ? new Date(payment.paidAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Date not available"}
+                        </p>
+                      </div>
+
+                      <p className={`text-lg font-bold ${paymentStatus === "success" ? "text-green-700" : paymentStatus === "pending" ? "text-yellow-700" : "text-red-700"}`}>
+                        ₹{Number(payment.amount || 0).toLocaleString("en-IN")}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
+                      <div><p className="text-xs text-gray-400 uppercase">Payment Mode</p><p className="text-sm font-medium text-gray-800 mt-1">{paymentMethod}</p></div>
+                      <div><p className="text-xs text-gray-400 uppercase">Payment Source</p><p className="text-sm font-medium text-gray-800 mt-1">{source}</p></div>
+                      {payment.transactionId && <div><p className="text-xs text-gray-400 uppercase">Transaction / UTR</p><p className="text-sm font-medium text-gray-800 mt-1 break-all">{payment.transactionId}</p></div>}
+                      {payment.razorpayPaymentId && <div><p className="text-xs text-gray-400 uppercase">Razorpay Payment ID</p><p className="text-sm font-medium text-gray-800 mt-1 break-all">{payment.razorpayPaymentId}</p></div>}
+                      {payment.razorpayOrderId && <div><p className="text-xs text-gray-400 uppercase">Razorpay Order ID</p><p className="text-sm font-medium text-gray-800 mt-1 break-all">{payment.razorpayOrderId}</p></div>}
+                      {payment.collectedBy && <div><p className="text-xs text-gray-400 uppercase">Received By</p><p className="text-sm font-medium text-gray-800 mt-1">{payment.collectedBy}</p></div>}
+                    </div>
+
+                    {payment.note && <div className="mt-4 bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400 uppercase mb-1">Note</p><p className="text-sm text-gray-700">{payment.note}</p></div>}
+
+                    {payment.receiptAttachment && (
+                      <div className="mt-4">
+                        <a href={payment.receiptAttachment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100">
+                          <FaFileDownload /> View Payment Receipt
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        )}
       </div>
 
       {/* ACTION BUTTONS */}

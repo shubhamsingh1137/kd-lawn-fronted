@@ -9,6 +9,7 @@ const fetchGallery      = () => api.get("/gallery?limit=6").then(r => r.data.ima
 const fetchPackages     = () => api.get("/packages").then(r => r.data.packages);
 const fetchTestimonials = () => api.get("/content/testimonials").then(r => r.data.testimonials);
 
+
 // ─── Section: Hero ────────────────────────────────────────────────────────────
 function HeroSection({ data }) {
   const title    = data?.title       || "Your Dream Wedding Starts Here";
@@ -211,6 +212,7 @@ export default function Home() {
 
   return (
     <>
+       
       <HeroSection        data={content?.hero} />
       <AboutSection       data={content?.about} />
       <GallerySection     images={gallery} />

@@ -38,13 +38,265 @@ body,
   margin: 0;
 }
 
-/* Chrome, Safari and Edge */
-*::-webkit-scrollbar {
-  display: none;
+
+/* Show vertical scrollbar for scrollable areas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #b88912 #f1f1f1;
+  -ms-overflow-style: auto;
 }
 
-/* Firefox and older Edge */
-* {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* Chrome, Safari and Edge */
+*::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #b88912;
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #946c0a;
+}
+
+
+/* Premium animated admin greeting */
+.greeting-wrap {
+  animation: greetingEnter 0.8s ease-out both;
+}
+
+.greeting-icon {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.greeting-wrap:hover .greeting-icon {
+  transform: translateY(-2px) rotate(-3deg);
+  box-shadow: 0 8px 22px rgba(217, 155, 24, 0.18);
+}
+
+.greeting-sparkle {
+  position: relative;
+  z-index: 1;
+  animation: sparkleFloat 3s ease-in-out infinite;
+}
+
+.greeting-glow {
+  pointer-events: none;
+  border: 1px solid rgba(217, 155, 24, 0.12);
+  animation: greetingGlow 3s ease-in-out infinite;
+}
+
+.greeting-text {
+  animation: greetingTextIn 0.9s ease-out both;
+}
+
+.greeting-dots {
+  display: inline-block;
+  color: #d4a017;
+  animation: greetingPulse 2s ease-in-out infinite;
+}
+
+@keyframes greetingEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes greetingTextIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sparkleFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) rotate(8deg) scale(1.08);
+  }
+}
+
+@keyframes greetingGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(217, 155, 24, 0);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(217, 155, 24, 0.16);
+  }
+}
+
+@keyframes greetingPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greeting-wrap,
+  .greeting-text,
+  .greeting-sparkle,
+  .greeting-glow,
+  .greeting-dots {
+    animation: none;
+  }
+}
+/* admin page sidebar animation and fade */
+@keyframes adminFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-clock {
+  animation: adminFadeIn 0.7s ease-out both;
+}
+
+.admin-header {
+  animation: adminHeaderFadeIn 0.6s ease-out both;
+}
+
+@keyframes adminHeaderFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.admin-page-enter {
+  animation: adminFadeIn 0.55s ease-out both;
+}
+/*admin sidebar background gradeitnt*/
+.admin-sidebar {
+  isolation: isolate;
+  background: #111827;
+}
+
+.sidebar-background {
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 58%;
+  background-image:
+    linear-gradient(
+      to bottom,
+      #111827 0%,
+      rgba(17, 24, 39, 0.75) 20%,
+      rgba(17, 24, 39, 0.28) 60%,
+      rgba(17, 24, 39, 0.12) 100%
+    ),
+    url("/images/wedding.jpeg");
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  opacity: 0;
+  animation: sidebarPhotoFade 1.5s ease-out 0.2s forwards;
+  pointer-events: none;
+}
+
+@keyframes sidebarPhotoFade {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-background {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Wedding photo fade in the admin top header */
+.admin-header-photo {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  background: #fff;
+}
+
+.header-photo-background {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("/images/wedding.jpeg");
+  background-size: cover;
+  background-position: center 45%;
+  opacity: 0;
+  animation: headerWeddingFade 1.8s ease-out forwards;
+  pointer-events: none;
+}
+
+
+.header-photo-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.60) 0%,
+    rgba(255, 255, 255, 0.48) 45%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+
+  pointer-events: none;
+}
+
+
+.admin-header-photo > :not(.header-photo-background):not(.header-photo-overlay) {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes headerWeddingFade {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-photo-background {
+    animation: none;
+    opacity: 1;
+  }
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
@@ -203,7 +204,9 @@ const shareViaEmail = (b) => {
 
 // ── Main Component ────────────────────────────────────────────
 export default function TrackBooking() {
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const { loginWithToken } = useAuth();
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
@@ -214,45 +217,38 @@ export default function TrackBooking() {
   const [qrPaymentModal, setQrPaymentModal] = useState(null);
   const [qrSubmitting, setQrSubmitting] = useState(false);
 
- const handleSendOTP = async (e) => {
+
+const handleSendOTP = async (e) => {
   e.preventDefault();
 
-  const cleanPhone = phone.replace(/\D/g, "");
+  const cleanEmail = email.trim().toLowerCase();
 
-  if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
-    return toast.error("Please enter a valid 10-digit mobile number");
-  }
+ if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+  return toast.error("Please enter a valid email address");
+}
 
   setLoading(true);
 
   try {
     const res = await api.post("/auth/send-otp", {
-      phone: cleanPhone,
+      email: cleanEmail,
     });
 
-    setPhone(cleanPhone);
+    setEmail(cleanEmail);
+    setMaskedEmail(res.data.maskedEmail || cleanEmail);
     setOtpSent(true);
 
-    toast.success("OTP sent successfully 📱");
-
-    // Development me backend OTP return karega
-    if (res.data.otp) {
-      console.log("Development OTP:", res.data.otp);
-
-    //  toast.success(`OTP: ${res.data.otp}`, {
-      //  duration: 10000,
-      //});
-    }
-
+    toast.success("OTP sent to your booking email address");
   } catch (err) {
     toast.error(
-      err.response?.data?.message ||
-      "Unable to send OTP"
+      err.response?.data?.message || "Unable to send OTP"
     );
   } finally {
     setLoading(false);
   }
 };
+
+
 const handleVerifyOTP = async (e) => {
   e.preventDefault();
 
@@ -263,57 +259,57 @@ const handleVerifyOTP = async (e) => {
   setLoading(true);
 
   try {
-    // 1. Verify OTP
+    // 1. Verify OTP using email
     const verifyRes = await api.post("/auth/verify-otp", {
-      phone,
+      email: email.trim().toLowerCase(),
       otp,
     });
 
-    const token = verifyRes.data.token;
+    // 2. Get token and user details from backend
+    const { token, user } = verifyRes.data;
 
-    if (!token) {
-      throw new Error("Authentication token not received");
+    if (!token || !user) {
+      throw new Error(
+        "Authentication token or user details not received"
+      );
     }
 
-    // 2. Save token
-    localStorage.setItem("token", token);
+    // 3. Save login in localStorage AND AuthContext
+    loginWithToken(token, user);
 
-    // 3. OTP verified
+    // 4. OTP verified successfully
     setOtpVerified(true);
-
-    // OTP box ka data clear
     setOtp("");
     setOtpSent(false);
 
-    toast.success("OTP verified successfully ✅");
+    toast.success("OTP verified successfully");
 
-    // 4. Get user's bookings
-    const bookingRes = await api.get(
-      `/bookings/track?phone=${phone}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    // 5. Fetch bookings using the verified token
+    const bookingRes = await api.get("/bookings/track", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-    setBookings(bookingRes.data.bookings);
+    const userBookings = bookingRes.data.bookings || [];
+    setBookings(userBookings);
 
-    if (!bookingRes.data.bookings.length) {
+    if (userBookings.length === 0) {
       toast("No bookings found.", {
         icon: "🔍",
       });
     }
-
   } catch (err) {
     toast.error(
       err.response?.data?.message ||
+      err.message ||
       "OTP verification failed"
     );
   } finally {
     setLoading(false);
   }
 };
+
   return (
     <div className="min-h-screen bg-cream">
       <div className="bg-gray-900 text-white py-16 text-center">
@@ -331,44 +327,34 @@ const handleVerifyOTP = async (e) => {
     {!otpSent ? (
       <>
         <p className="text-sm text-gray-500 mb-4">
-          Enter the mobile number you used when booking.
-          We will send you an OTP to verify your identity.
-        </p>
+  Enter the email address you used when making your booking.
+  We will send an OTP to that email address.
+</p>
+<form onSubmit={handleSendOTP} className="flex flex-col sm:flex-row gap-3">
+  <input
+    type="email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    placeholder="Enter your booking email"
+    className="input-field flex-1 min-w-0"
+    autoComplete="email"
+    required
+  />
 
-        <form
-          onSubmit={handleSendOTP}
-          className="flex gap-3"
-        >
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) =>
-              setPhone(
-                e.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, 10)
-              )
-            }
-            placeholder="98765 43210"
-            className="input-field flex-1"
-            maxLength={10}
-            required
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-gold px-6 rounded-xl"
-          >
-            {loading ? "Sending..." : "Send OTP"}
-          </button>
-        </form>
+  <button
+    type="submit"
+    disabled={loading}
+    className="btn-gold px-6 rounded-xl"
+  >
+    {loading ? "Sending..." : "Send OTP"}
+  </button>
+</form>
       </>
     ) : (
       <>
         <p className="text-sm text-gray-500 mb-4">
           OTP has been sent to{" "}
-          <strong>+91 {phone}</strong>
+          <strong>{maskedEmail}</strong>
         </p>
 
         <form
@@ -415,7 +401,7 @@ const handleVerifyOTP = async (e) => {
           }}
           className="text-sm text-gray-500 hover:text-gray-800 mt-4"
         >
-          ← Change mobile number
+          ← Change email address
         </button>
       </>
     )}
@@ -426,7 +412,7 @@ const handleVerifyOTP = async (e) => {
         {bookings !== null && (
           bookings.length === 0 ? (
             <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
-              No bookings found for this number.
+              No bookings found for this email.
             </div>
           ) : (
             <div className="space-y-4">
@@ -798,16 +784,13 @@ const handleVerifyOTP = async (e) => {
                     setQrPaymentModal(null);
 
                     // Refresh booking list
-                    const bookingRes = await api.get(
-                      `/bookings/track?phone=${phone}`,
-                      {
-                        headers: {
-                          Authorization: `Bearer ${localStorage.getItem("token")}`,
-                        },
-                      }
-                    );
+                    const bookingRes = await api.get("/bookings/track", {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+});
 
-                    setBookings(bookingRes.data.bookings);
+setBookings(bookingRes.data.bookings || []);
 
                   } catch (err) {
                     toast.error(

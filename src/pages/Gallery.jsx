@@ -14,7 +14,7 @@ export default function Gallery() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-gray-900 text-white py-20 text-center">
+      <div className="bg-gray-900 text-white py-20 text-center ">
         <p className="section-subtitle text-gold">Our Portfolio</p>
         <h1 className="section-title text-white">Event Gallery</h1>
         <p className="text-gray-400 max-w-xl mx-auto mt-2 text-sm">

@@ -318,6 +318,11 @@ const handlePreviewInvoice = async () => {
 // =========================================================
 
 const handleApproveQRPayment = async (paymentId) => {
+  if (booking.status !== "confirmed") {
+    toast.error("Only confirmed bookings can have QR payments approved.");
+    return;
+  }
+
   try {
     const confirmed = window.confirm(
       "Are you sure you want to approve this QR payment?"
@@ -325,16 +330,14 @@ const handleApproveQRPayment = async (paymentId) => {
 
     if (!confirmed) return;
 
-   await api.patch(
-  `/bookings/admin/${bookingId}/qr-payment/${paymentId}/approve`
-);
+    await api.patch(
+      `/bookings/admin/${bookingId}/qr-payment/${paymentId}/approve`
+    );
 
     toast.success("QR payment approved successfully.");
-
     await refetch();
   } catch (error) {
     console.error("Approve QR payment error:", error);
-
     toast.error(
       error?.response?.data?.message ||
         "Failed to approve QR payment."
@@ -347,6 +350,11 @@ const handleApproveQRPayment = async (paymentId) => {
 // =========================================================
 
 const handleRejectQRPayment = async (paymentId) => {
+  if (booking.status !== "confirmed") {
+    toast.error("Only confirmed bookings can have QR payments rejected.");
+    return;
+  }
+
   try {
     const confirmed = window.confirm(
       "Are you sure you want to reject this QR payment?"
@@ -355,15 +363,13 @@ const handleRejectQRPayment = async (paymentId) => {
     if (!confirmed) return;
 
     await api.patch(
-  `/bookings/admin/${bookingId}/qr-payment/${paymentId}/reject`
-);
+      `/bookings/admin/${bookingId}/qr-payment/${paymentId}/reject`
+    );
 
     toast.success("QR payment rejected.");
-
     await refetch();
   } catch (error) {
     console.error("Reject QR payment error:", error);
-
     toast.error(
       error?.response?.data?.message ||
         "Failed to reject QR payment."
@@ -374,6 +380,10 @@ const handleRejectQRPayment = async (paymentId) => {
 
   const handleManualPayment = async (e) => {
   e.preventDefault();
+    if (booking.status !== "confirmed") {
+    toast.error("Please confirm the booking before adding payment.");
+    return;
+  }
 
   const amount = Number(manualPayment.amount);
 
@@ -599,6 +609,18 @@ const handleRejectQRPayment = async (paymentId) => {
               </p>
             </div>
 
+{/* Address */}
+<div className="md:col-span-2">
+  <p className="text-xs text-gray-400 uppercase tracking-wide">
+    Address
+  </p>
+
+  <p className="font-semibold text-gray-800 mt-1 whitespace-pre-wrap break-words">
+    {booking.contactAddress?.trim() || "Address not provided"}
+  </p>
+</div>
+
+
           </div>
 
         </div>
@@ -625,7 +647,7 @@ const handleRejectQRPayment = async (paymentId) => {
               </p>
 
               <p className="font-semibold text-gray-800 mt-1">
-                #{booking._id?.slice(-8).toUpperCase()}
+               {booking.bookingNumber || `#${booking._id?.slice(-8).toUpperCase()}`}
               </p>
             </div>
 
@@ -944,7 +966,7 @@ const handleRejectQRPayment = async (paymentId) => {
 
           </div>
    
-          {remainingAmount > 0 && (
+  {booking.status === "confirmed" && remainingAmount > 0 && (
   <button
     type="button"
     onClick={() => setShowManualPayment(true)}
@@ -1113,27 +1135,24 @@ const handleRejectQRPayment = async (paymentId) => {
             <div className="flex flex-col sm:flex-row lg:flex-col gap-2 lg:w-32">
 
               <button
-                type="button"
-                onClick={() =>
-                  handleApproveQRPayment(payment._id)
-                }
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
-              >
-                <FaCheckCircle />
-                Approve
-              </button>
+  type="button"
+  onClick={() => handleApproveQRPayment(payment._id)}
+  disabled={booking.status !== "confirmed"}
+  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  <FaCheckCircle />
+  Approve
+</button>
 
-              <button
-                type="button"
-                onClick={() =>
-                  handleRejectQRPayment(payment._id)
-                }
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
-              >
-                <FaTimesCircle />
-                Reject
-              </button>
-
+             <button
+  type="button"
+  onClick={() => handleRejectQRPayment(payment._id)}
+  disabled={booking.status !== "confirmed"}
+  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  <FaTimesCircle />
+  Reject
+</button>
             </div>
 
           </div>
@@ -1442,7 +1461,9 @@ const handleRejectQRPayment = async (paymentId) => {
             MANUAL PAYMENT MODAL
         ==================================================== */}
 
-        {showManualPayment && (
+        {booking.status === "confirmed" &&
+  remainingAmount > 0 &&
+  showManualPayment && (
           <div
             className="
               fixed inset-0 z-[9999]

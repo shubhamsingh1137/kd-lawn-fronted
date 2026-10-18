@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute, AdminRoute } from "./utils/ProtectedRoute";
 
@@ -38,20 +38,28 @@ import TrackBooking from "./pages/TrackBooking";
 import PaymentPage from "./pages/PaymentPage";
 
 
+
 const PublicLayout = ({ children }) => (
   <>
-    <div className="fixed top-0 left-0 right-0 z-50 w-full">
+    {/* Header stays in normal document flow */}
+    <header className="relative z-50 w-full">
       <Navbar />
       <AnnouncementBanner />
-    </div>
+    </header>
 
-    <main>{children}</main>
+    {/* Page content starts after the complete header */}
+    <main className="relative z-0">
+      {children}
+    </main>
 
     <Footer />
   </>
 );
 
+
 export default function App() {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith("/admin");
   return (
     <AuthProvider>
       <Routes>
@@ -88,9 +96,15 @@ export default function App() {
             <Route path="announcements" element={<ManageAnnouncements />} />
           </Route>
         </Route>
-      </Routes>
-      <WhatsAppButton />
-      <Chatbot />
+            </Routes>
+
+      {!isAdminPage && (
+        <>
+          <WhatsAppButton />
+          <Chatbot />
+        </>
+      )}
+
     </AuthProvider>
     
   );

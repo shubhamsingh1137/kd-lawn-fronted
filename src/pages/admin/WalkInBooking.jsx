@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 import {
 
@@ -25,6 +27,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import api from "../../services/api";
+import Swal from "sweetalert2";
 
 const EVENT_TYPES = [
 
@@ -49,6 +52,7 @@ const initialForm = {
   contactPhone: "",
 
   contactEmail: "",
+  contactAddress: "",
 
   eventType: "Wedding",
 
@@ -59,6 +63,7 @@ const initialForm = {
   guestCount: "100",
 
   totalAmount: "",
+  discountAmount: "0",
 
   advanceAmount: "0",
 
@@ -111,6 +116,10 @@ export default function WalkInBooking() {
   const navigate = useNavigate();
 
   const [packages, setPackages] = useState([]);
+
+const [bookedDates, setBookedDates] = useState([]);
+const [loadingBookedDates, setLoadingBookedDates] = useState(true);
+
 
   const [form, setForm] = useState(initialForm);
 
@@ -190,6 +199,27 @@ export default function WalkInBooking() {
 
   }, []);
 
+  useEffect(() => {
+    const fetchBookedDates = async () => {
+      try {
+        setLoadingBookedDates(true);
+
+        const response = await api.get("/bookings/booked-dates");
+        setBookedDates(response.data?.dates || []);
+      } catch (err) {
+        console.error("Fetch booked dates error:", err);
+        setError(
+          "Unable to load booking availability. Please refresh and try again."
+        );
+      } finally {
+        setLoadingBookedDates(false);
+      }
+    };
+
+    fetchBookedDates();
+  }, []);
+
+
   const selectedPackage = useMemo(
 
     () =>
@@ -206,11 +236,11 @@ export default function WalkInBooking() {
 
   const packagePrice = getPackagePrice(selectedPackage);
 
-  const totalAmount = Number(form.totalAmount || 0);
-
-  const advanceAmount = Number(form.advanceAmount || 0);
-
-  const remainingAmount = totalAmount - advanceAmount;
+const totalAmount = Number(form.totalAmount || 0);
+const discountAmount = Number(form.discountAmount || 0);
+const payableAmount = totalAmount - discountAmount;
+const advanceAmount = Number(form.advanceAmount || 0);
+const remainingAmount = payableAmount - advanceAmount;
 
   const paymentStatus =
 
@@ -330,6 +360,16 @@ export default function WalkInBooking() {
 
     }
 
+if (
+  form.discountAmount === "" ||
+  !Number.isFinite(discountAmount) ||
+  discountAmount < 0 ||
+  discountAmount > totalAmount
+) {
+  return "Discount must be between ₹0 and the total amount.";
+}
+
+
     if (
 
       form.advanceAmount === "" ||
@@ -344,11 +384,9 @@ export default function WalkInBooking() {
 
     }
 
-    if (advanceAmount > totalAmount) {
-
-      return "Advance amount cannot exceed the total amount.";
-
-    }
+    if (advanceAmount > payableAmount) {
+  return "Advance amount cannot exceed the payable amount after discount.";
+}
 
     return "";
 
@@ -372,13 +410,32 @@ export default function WalkInBooking() {
 
     }
 
-    const confirmed = window.confirm(
+if (loadingBookedDates) {
+  setError("Please wait while booking availability loads.");
+  return;
+}
 
-      "Create this walk-in booking with Confirmed status?"
+if (bookedDates.includes(form.eventDate)) {
+  setError(
+    "This date is already booked. Please try another date."
+  );
+  return;
+}
 
-    );
 
-    if (!confirmed) return;
+   const confirmation = await Swal.fire({
+  title: "Confirm Walk-in Booking?",
+  text: "Do you want to create this booking with Confirmed status?",
+  icon: "question",
+  showCancelButton: true,
+  confirmButtonText: "Yes, Create Booking",
+  cancelButtonText: "Cancel",
+  confirmButtonColor: "#b8860b",
+  cancelButtonColor: "#6b7280",
+  reverseButtons: true,
+});
+
+if (!confirmation.isConfirmed) return;
 
     try {
 
@@ -392,6 +449,8 @@ export default function WalkInBooking() {
 
         contactEmail: form.contactEmail.trim(),
 
+        contactAddress: form.contactAddress.trim(),
+
         eventType: form.eventType,
 
         eventDate: form.eventDate,
@@ -400,17 +459,12 @@ export default function WalkInBooking() {
 
         guestCount: Number(form.guestCount),
 
-        totalAmount,
-
-        originalAmount: totalAmount,
-
-        discountAmount: 0,
-
-        payableAmount: totalAmount,
-
-        advanceAmount,
-
-        remainingAmount,
+        totalAmount: totalAmount,
+originalAmount: totalAmount,
+discountAmount,
+payableAmount,
+advanceAmount,
+remainingAmount,
 
         paymentStatus,
 
@@ -442,13 +496,15 @@ export default function WalkInBooking() {
 
       }
 
-      setSuccess(
-
-        response.data?.message ||
-
-          "Walk-in booking created successfully. Please verify the customer email notification."
-
-      );
+      await Swal.fire({
+  title: "Booking Created!",
+  text:
+    response.data?.message ||
+    "Walk-in booking has been created successfully.",
+  icon: "success",
+  confirmButtonText: "OK",
+  confirmButtonColor: "#15803d",
+});
 
       setForm(initialForm);
 
@@ -482,15 +538,20 @@ export default function WalkInBooking() {
 
       );
 
-      setError(
+     const errorMessage =
+  err.response?.data?.message ||
+  err.message ||
+  "Unable to create the booking. Please try again.";
 
-        err.response?.data?.message ||
+setError("");
 
-          err.message ||
-
-          "Unable to create the booking. Please try again."
-
-      );
+await Swal.fire({
+  title: "Booking Failed",
+  text: errorMessage,
+  icon: "error",
+  confirmButtonText: "OK",
+  confirmButtonColor: "#dc2626",
+});
 
     } finally {
 
@@ -542,59 +603,15 @@ export default function WalkInBooking() {
 
             </h1>
 
-            <p className="mt-1 text-sm text-gray-500">
+            </div>
 
-              Create a booking for a customer visiting the lawn in person.
-
-            </p>
-
-          </div>
-
-          <div className="inline-flex items-center gap-2 self-start rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
-
-            <FaCheckCircle />
-
-            Default Status: Confirmed
-
-          </div>
+         
 
         </div>
 
         {/* Alerts */}
 
-        {error && (
-
-          <div
-
-            role="alert"
-
-            className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-
-          >
-
-            {error}
-
-          </div>
-
-        )}
-
-        {success && (
-
-          <div
-
-            role="status"
-
-            className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"
-
-          >
-
-            {success}
-
-          </div>
-
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
+         <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* Customer information */}
 
@@ -724,6 +741,22 @@ export default function WalkInBooking() {
 
                 </p>
 
+<div className="md:col-span-2">
+  <label className={labelClass}>
+    Client Address
+  </label>
+  <textarea
+    name="contactAddress"
+    value={form.contactAddress}
+    onChange={updateField}
+    className={inputClass}
+    placeholder="Enter complete client address"
+    rows={3}
+    maxLength={500}
+  />
+</div>
+
+
               </div>
 
             </div>
@@ -798,23 +831,121 @@ export default function WalkInBooking() {
 
                 </label>
 
-                <input
+               
+<div className="mt-2 rounded-xl border border-gray-200 p-3 sm:p-4">
+  {loadingBookedDates ? (
+    <p className="text-sm text-gray-500">
+      Loading date availability...
+    </p>
+  ) : (
+    <>
+      <DayPicker
+        mode="single"
+        selected={
+          form.eventDate
+            ? new Date(`${form.eventDate}T12:00:00`)
+            : undefined
+        }
+        onSelect={(date) => {
+          if (!date) return;
 
-                  name="eventDate"
+          const isoDate = [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, "0"),
+            String(date.getDate()).padStart(2, "0"),
+          ].join("-");
 
-                  type="date"
+          if (bookedDates.includes(isoDate)) {
+            setError(
+              "This date is already booked. Please try another date."
+            );
+            return;
+          }
 
-                  value={form.eventDate}
+          setForm((prev) => ({
+            ...prev,
+            eventDate: isoDate,
+          }));
+          setError("");
+          setSuccess("");
+        }}
+        disabled={[
+          { before: new Date(
+              new Date().getFullYear(),
+              new Date().getMonth(),
+              new Date().getDate()
+            ) },
+          (date) => {
+            const isoDate = [
+              date.getFullYear(),
+              String(date.getMonth() + 1).padStart(2, "0"),
+              String(date.getDate()).padStart(2, "0"),
+            ].join("-");
 
-                  onChange={updateField}
+            return bookedDates.includes(isoDate);
+          },
+        ]}
+        modifiers={{
+          booked: (date) => {
+            const isoDate = [
+              date.getFullYear(),
+              String(date.getMonth() + 1).padStart(2, "0"),
+              String(date.getDate()).padStart(2, "0"),
+            ].join("-");
 
-                  min={minDate}
+            return bookedDates.includes(isoDate);
+          },
+          available: (date) => {
+            const isoDate = [
+              date.getFullYear(),
+              String(date.getMonth() + 1).padStart(2, "0"),
+              String(date.getDate()).padStart(2, "0"),
+            ].join("-");
 
-                  className={inputClass}
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-                  required
+            return date >= today && !bookedDates.includes(isoDate);
+          },
+        }}
+        modifiersClassNames={{
+          booked: "walkin-booked-date",
+          available: "walkin-available-date",
+        }}
+        className="mx-auto"
+      />
 
-                />
+      <div className="mt-3 flex flex-wrap gap-4 text-xs">
+        <span className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-sm bg-green-600" />
+          Available
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-sm bg-red-600" />
+          Already booked
+        </span>
+      </div>
+
+      <p className="mt-3 text-sm text-gray-700">
+        Selected date:{" "}
+        <strong>{form.eventDate || "No date selected"}</strong>
+      </p>
+    </>
+  )}
+</div>
+
+<style>{`
+  .walkin-booked-date {
+    color: white !important;
+    background-color: #dc2626 !important;
+    border-radius: 6px !important;
+    opacity: 1 !important;
+  }
+
+  .walkin-available-date {
+    color: #15803d !important;
+  }
+`}</style>
 
               </div>
 
@@ -1016,6 +1147,26 @@ export default function WalkInBooking() {
 
               </div>
 
+<div>
+  <label className={labelClass}>
+    <FaMoneyBillWave className="text-amber-700" />
+    Discount Amount (₹)
+  </label>
+  <input
+    name="discountAmount"
+    type="number"
+    min="0"
+    max={totalAmount}
+    step="0.01"
+    value={form.discountAmount}
+    onChange={updateField}
+    className={inputClass}
+    placeholder="Enter discount amount"
+    required
+  />
+</div>
+
+
               <div>
 
                 <label className={labelClass}>
@@ -1050,7 +1201,7 @@ export default function WalkInBooking() {
 
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
 
               <div className="rounded-lg bg-gray-50 p-4">
 
@@ -1067,6 +1218,25 @@ export default function WalkInBooking() {
                 </p>
 
               </div>
+
+<div className="rounded-lg bg-orange-50 p-4">
+  <p className="text-xs font-medium text-orange-700">
+    Discount
+  </p>
+  <p className="mt-1 text-xl font-bold text-orange-800">
+    -{money(discountAmount)}
+  </p>
+</div>
+
+<div className="rounded-lg bg-blue-50 p-4">
+  <p className="text-xs font-medium text-blue-700">
+    Payable Amount
+  </p>
+  <p className="mt-1 text-xl font-bold text-blue-800">
+    {money(payableAmount)}
+  </p>
+</div>
+
 
               <div className="rounded-lg bg-green-50 p-4">
 
@@ -1210,6 +1380,8 @@ export default function WalkInBooking() {
 
                 loadingPackages ||
 
+                loadingBookedDates ||
+
                 packages.length === 0
 
               }
@@ -1224,7 +1396,7 @@ export default function WalkInBooking() {
 
                 ? "Creating Booking..."
 
-                : "Create Walk-in Booking"}
+                : "Submit Booking"}
 
             </button>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation} from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
@@ -13,6 +13,11 @@ const STATUS_COLORS = {
 };
 export default function ManageBookings() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+const selectedBookingId = new URLSearchParams(
+  location.search
+).get("bookingId");
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("");
   // ==============================
@@ -29,7 +34,8 @@ export default function ManageBookings() {
         )
         .then((res) => res.data)
   );
-  useEffect(() => {
+  
+useEffect(() => {
   const refreshBookings = () => {
     refetch();
   };
@@ -46,6 +52,22 @@ export default function ManageBookings() {
     );
   };
 }, [refetch]);
+
+useEffect(() => {
+  if (!selectedBookingId || !data?.bookings?.length) return;
+
+  const row = document.getElementById(
+    `booking-${selectedBookingId}`
+  );
+
+  if (row) {
+    row.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+}, [selectedBookingId, data]);
+
   // ==============================
   // UPDATE STATUS
   // ==============================
@@ -239,15 +261,20 @@ const remainingAmount = Math.max(
   0
 );
 const isZeroDiscount = discountAmount === 0;
-                  return (
-                    <tr
-  key={booking._id}
-  className={
-    isZeroDiscount
-      ? "bg-amber-50 hover:bg-amber-100 transition-colors"
-      : "bg-white hover:bg-gray-50 transition-colors"
-  }
->
+                  
+return (
+  <tr
+    key={booking._id}
+    id={`booking-${booking._id}`}
+    className={
+      selectedBookingId === booking._id
+        ? "bg-amber-100 ring-2 ring-inset ring-amber-400"
+        : isZeroDiscount
+          ? "bg-amber-50 hover:bg-amber-100 transition-colors"
+          : "bg-white hover:bg-gray-50 transition-colors"
+    }
+  >
+
                       {/* NAME */}
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-800">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "react-query";
+import { useQuery, useQueryClient } from "react-query";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
@@ -22,6 +22,7 @@ const loadRazorpay = () =>
 export default function PaymentPage() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { isLoggedIn } = useAuth();
 
@@ -64,15 +65,20 @@ export default function PaymentPage() {
           </h2>
 
           <p className="text-gray-500 text-sm mb-6">
-            Payment karne ke liye apne mobile number se OTP login karein.
+            please login to proceed with the payment.
           </p>
 
-          <a
-            href={`/otp-login?redirect=/pay/${bookingId}`}
-            className="btn-gold block py-3 rounded-xl text-center"
-          >
-            Mobile OTP se Login →
-          </a>
+          <button
+  type="button"
+  onClick={() =>
+    navigate(
+      `/otp-login?redirect=${encodeURIComponent(`/pay/${bookingId}`)}`
+    )
+  }
+  className="btn-gold block w-full py-3 rounded-xl text-center"
+>
+  Email OTP se Login →
+</button>
 
         </div>
       </div>
@@ -287,11 +293,11 @@ export default function PaymentPage() {
               }
             );
 
-            toast.success(
-              "🎉 Payment successful! The receipt has been sent to your email."
-            );
+            toast.success("Payment verified successfully!");
 
-            setPaid(true);
+await queryClient.invalidateQueries(["bookingPublic", bookingId]);
+
+setPaid(true);
 
           } catch (error) {
 

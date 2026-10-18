@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
@@ -80,13 +81,71 @@ export default function AdminLayout() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+  const timer = setInterval(() => {
+    setCurrentTime(new Date());
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, []);
+
 
   const notificationRef = useRef(null);
+  const notificationButtonRef = useRef(null);
+  const notificationDropdownRef = useRef(null);
+  const [notificationPosition, setNotificationPosition] = useState({
+  top: 0,
+  right: 16,
+});
+
+const openNotifications = (event) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+
+  setNotificationPosition({
+    top: rect.bottom + 8,
+    right: Math.max(16, window.innerWidth - rect.right),
+  });
+
+  setShowNotifications((prev) => !prev);
+};
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
+  const formattedDate = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+}).format(currentTime);
+
+const formattedTime = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+}).format(currentTime);
+
+const greetingHour = Number(
+  new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    hour12: false,
+  }).format(currentTime)
+);
+
+const greeting =
+  greetingHour < 12
+    ? "Good Morning"
+    : greetingHour < 17
+    ? "Good Afternoon"
+    : greetingHour < 21
+    ? "Good Evening"
+    : "Good Night";
 
   // =========================================================
   // FETCH NOTIFICATIONS
@@ -131,21 +190,24 @@ export default function AdminLayout() {
   // =========================================================
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
-        setShowNotifications(false);
-      }
-    };
+  const handleClickOutside = (event) => {
+    const clickedInsideButton =
+      notificationRef.current?.contains(event.target);
 
-    document.addEventListener("mousedown", handleClickOutside);
+    const clickedInsideDropdown =
+      notificationDropdownRef.current?.contains(event.target);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    if (!clickedInsideButton && !clickedInsideDropdown) {
+      setShowNotifications(false);
+    }
+  };
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
 
   // =========================================================
   // MARK SINGLE NOTIFICATION AS READ
@@ -255,7 +317,7 @@ export default function AdminLayout() {
 
     // Other booking notifications
     if (notification.booking?._id) {
-      navigate(`/admin/bookings/${notification.booking._id}`);
+      navigate(`/admin/bookings?bookingId=${notification.booking._id}`);
     }
   };
 
@@ -332,7 +394,10 @@ export default function AdminLayout() {
           SIDEBAR
       ====================================================== */}
 
-     <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 shrink-0 flex-col overflow-y-auto bg-gray-900 text-white">
+     <aside className="admin-sidebar fixed left-0 top-0 z-50 flex h-screen w-64 shrink-0 flex-col overflow-y-auto text-white">
+  <div className="sidebar-background" />
+
+  <div className="relative z-10 flex min-h-full flex-col">
 
         <div className="px-6 py-6 border-b border-gray-700">
           <h1 className="text-gold font-serif text-xl font-bold">
@@ -379,7 +444,7 @@ export default function AdminLayout() {
             <FaSignOutAlt />
             Logout
           </button>
-
+        </div>
         </div>
       </aside>
 
@@ -393,21 +458,75 @@ export default function AdminLayout() {
             TOP HEADER
         ==================================================== */}
 
-        <header className="sticky top-0 z-40 h-16 bg-white border-b border-gray-200 flex items-center justify-end px-6">
+        <header className="admin-header admin-header-photo sticky top-0 z-40 isolate overflow-visible min-h-20 border-b border-gray-200 flex items-center justify-between gap-4 px-4 sm:px-6">
+  <div className="header-photo-background" />
 
           {/* =================================================
               NOTIFICATION
           ================================================== */}
+          {/* LIVE DATE & TIME */}
+{/* LIVE DATE & TIME */}
+<div className="admin-clock flex flex-1 items-center justify-start gap-3 sm:gap-5 lg:gap-7 min-w-0">
 
+  {/* Greeting */}
+  {/* Animated Greeting */}
+<div className="greeting-wrap shrink-0 flex items-center gap-2">
+  <div className="greeting-icon relative flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-100 shadow-sm">
+    <span className="text-xl greeting-sparkle">✨</span>
+
+    <span className="greeting-glow absolute inset-0 rounded-2xl" />
+  </div>
+
+  <div className="greeting-text">
+    <p className="text-sm sm:text-base font-bold text-gray-800 whitespace-nowrap">
+      {greeting}
+      <span className="greeting-dots">!</span>
+    </p>
+
+    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-amber-700">
+      Welcome Back
+    </p>
+  </div>
+</div>
+
+  {/* Divider */}
+  <div className="hidden sm:block h-10 w-px bg-gray-200" />
+
+  {/* Date */}
+  <div className="hidden sm:flex items-center gap-2 min-w-0">
+    <span className="text-amber-600">📅</span>
+    <p className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">
+      {formattedDate}
+    </p>
+  </div>
+
+  {/* Divider */}
+  <div className="hidden sm:block h-10 w-px bg-gray-200" />
+
+  {/* Live Clock */}
+  <div className="flex items-center gap-2 shrink-0 rounded-xl bg-amber-50 px-3 py-2">
+    <span className="relative flex h-2.5 w-2.5">
+      <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
+      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+    </span>
+
+    <span className="text-sm font-bold text-amber-700 tabular-nums whitespace-nowrap">
+      {formattedTime}
+    </span>
+
+    <span className="text-[10px] font-semibold text-gray-500">
+      IST
+    </span>
+  </div>
+</div>
           <div
-            ref={notificationRef}
-            className="relative"
-          >
+  ref={notificationRef}
+  className="relative z-[100]"
+>
 
             <button
-              onClick={() =>
-                setShowNotifications((prev) => !prev)
-              }
+             ref={notificationButtonRef}
+             onClick={openNotifications}
               className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
               title="Notifications"
             >
@@ -426,9 +545,20 @@ export default function AdminLayout() {
                 NOTIFICATION DROPDOWN
             ================================================== */}
 
-            {showNotifications && (
-              <div className="absolute right-0 top-12 w-[390px] max-w-[calc(100vw-30px)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-
+            {showNotifications &&
+  createPortal(
+    <div
+      ref={notificationDropdownRef}
+      style={{
+        position: "fixed",
+        top: notificationPosition.top,
+        right: notificationPosition.right,
+        zIndex: 99999,
+        width: "390px",
+        maxWidth: "calc(100vw - 30px)",
+      }}
+      className="rounded-xl bg-white shadow-2xl border border-gray-200 overflow-hidden"
+    >
                 {/* Header */}
 
                 <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -552,8 +682,9 @@ export default function AdminLayout() {
                                   </p>
                                 )}
 
-                              </div>
-                            )}
+                               </div>
+                               
+                               )}
 
                             <p className="text-[11px] text-gray-400 mt-2">
                               {formatNotificationTime(
@@ -586,18 +717,21 @@ export default function AdminLayout() {
 
                 </div>
 
-              </div>
-            )}
+            </div>,
+document.body
+)}
 
           </div>
-
+<div className="header-photo-overlay" />
         </header>
 
         {/* ===================================================
             PAGE CONTENT
         ==================================================== */}
 
-        <Outlet />
+        <div className="admin-page-enter min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+  <Outlet />
+</div>
 
       </main>
     </div>

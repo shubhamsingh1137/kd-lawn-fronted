@@ -75,10 +75,15 @@ function ScrollingAnnouncement({ announcement }) {
 
       <style>{`
         .announcement-banner {
-          width: 100%;
-          overflow: hidden;
-          padding: 10px 0;
-        }
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 10px 0;
+  line-height: 20px;
+}
 
         .announcement-track {
           display: flex;

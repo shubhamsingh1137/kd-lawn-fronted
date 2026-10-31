@@ -43,8 +43,12 @@ export default function Navbar() {
   };
 
   return (
-    <>
-      {/* ── Top Info Ribbon ── */}
+    
+      <>
+  {/* FIXED HEADER WRAPPER */}
+  <div className="fixed top-0 left-0 right-0 z-[1000]">
+
+  {/* ── Top Info Ribbon ── */}
 <div className="bg-yellow-900 text-yellow-100 py-2 px-4">
   <div className="max-w-7xl mx-auto flex items-center justify-between md:justify-center gap-3 md:gap-4 text-xs md:text-sm font-medium">
     
@@ -209,7 +213,12 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-      </nav>
+            </nav>
+
+  </div>
+
+  {/* Spacer: prevents page content from going behind fixed header */}
+  <div className="h-[108px]" />
     </>
   );
 }

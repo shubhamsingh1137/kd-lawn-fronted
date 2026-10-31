@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { FaTrash } from "react-icons/fa";
 import { useNavigate, useLocation} from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import api from "../../services/api";
@@ -88,6 +89,34 @@ const updateStatus = useMutation(
     },
   }
 );
+
+const cancelBookingMutation = useMutation(
+  ({ id, reason }) =>
+    api.patch(`/bookings/admin/${id}/cancel`, { reason }),
+  {
+    onSuccess: (response) => {
+      const emailSent = response.data?.cancellationEmailSent;
+
+      toast.success(
+        emailSent
+          ? "Booking cancelled. Customer email sent."
+          : "Booking cancelled, but customer email was not sent."
+      );
+
+      qc.invalidateQueries(["adminBookings"]);
+      qc.invalidateQueries("bookingStats");
+      qc.invalidateQueries("adminDashboardBookings");
+      qc.invalidateQueries(["adminBooking"]);
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to cancel booking."
+      );
+    },
+  }
+);
+
 const deleteBooking = useMutation(
   (id) => api.delete(`/bookings/admin/${id}`),
   {
@@ -100,6 +129,7 @@ const deleteBooking = useMutation(
       });
       qc.invalidateQueries(["adminBookings", statusFilter]);
       qc.invalidateQueries("bookingStats");
+      qc.invalidateQueries("adminDashboardBookings");
     },
     onError: (error) => {
       Swal.fire({
@@ -116,14 +146,96 @@ const deleteBooking = useMutation(
   // ==============================
   // STATUS CHANGE
   // ==============================
-  const handleStatusChange = (booking, newStatus) => {
+ 
+const handleStatusChange = (booking, newStatus) => {
   if (!newStatus || newStatus === booking.status) return;
+
+  if (newStatus === "cancelled") {
+    handleCancelBooking(booking);
+    return;
+  }
+
+  if (["cancelled", "completed"].includes(booking.status)) {
+    toast.error("This booking status cannot be changed.");
+    return;
+  }
 
   updateStatus.mutate({
     id: booking._id,
     status: newStatus,
   });
 };
+
+
+const handleCancelBooking = async (booking) => {
+  if (["cancelled", "completed"].includes(booking.status)) {
+    toast.error("This booking cannot be cancelled.");
+    return;
+  }
+
+  // Match the backend calculation.
+  const successfulPaymentTotal = Array.isArray(booking.paymentHistory)
+    ? booking.paymentHistory
+        .filter((payment) => payment.status === "success")
+        .reduce(
+          (sum, payment) => sum + Number(payment.amount || 0),
+          0
+        )
+    : 0;
+
+  const amountPaid = Math.max(
+    successfulPaymentTotal,
+    Number(booking.advanceAmount || 0)
+  );
+
+  const nonRefundableAmount = Math.min(amountPaid, 11000);
+  const amountToSettle = Math.max(
+    amountPaid - nonRefundableAmount,
+    0
+  );
+
+  const money = (amount) =>
+    `₹${Number(amount || 0).toLocaleString("en-IN")}`;
+
+  const result = await Swal.fire({
+    title: "Cancel this booking?",
+    text: `Booking for ${booking.contactName || "this customer"} will be cancelled.`,
+    icon: "warning",
+    html: `
+      <div style="text-align:left;font-size:14px;line-height:1.9">
+        <p><b>Booking ID:</b> ${booking.bookingNumber || booking._id}</p>
+        <p><b>Amount paid:</b> ${money(amountPaid)}</p>
+        <p><b>Non-refundable amount:</b> ${money(nonRefundableAmount)}</p>
+        <p><b>Pending office settlement:</b> ${money(amountToSettle)}</p>
+        <p style="color:#b45309;font-size:12px">
+          Please verify the payment records before confirming.
+          This action will cancel the booking.
+        </p>
+      </div>
+    `,
+    input: "textarea",
+    inputLabel: "Cancellation reason (optional)",
+    inputPlaceholder: "Enter reason for cancellation...",
+    inputAttributes: {
+      "aria-label": "Cancellation reason",
+    },
+    showCancelButton: true,
+    confirmButtonText: "Confirm Cancellation",
+    cancelButtonText: "Go Back",
+    confirmButtonColor: "#b91c1c",
+    cancelButtonColor: "#6b7280",
+    reverseButtons: true,
+    preConfirm: (reason) => String(reason || "").trim(),
+  });
+
+  if (!result.isConfirmed) return;
+
+  cancelBookingMutation.mutate({
+    id: booking._id,
+    reason: result.value || "",
+  });
+};
+
 
 const handleDelete = async (booking) => {
   const result = await Swal.fire({
@@ -158,6 +270,8 @@ const handleDelete = async (booking) => {
             "pending",
             "confirmed",
             "rejected",
+            "cancelled",
+            "completed",
           ].map((status) => (
             <button
               key={status}
@@ -261,71 +375,96 @@ const remainingAmount = Math.max(
   0
 );
 const isZeroDiscount = discountAmount === 0;
+const cancelledTextClass =
+  booking.status === "cancelled"
+    ? "line-through decoration-red-500 decoration-2"
+    : "";
                   
 return (
   <tr
     key={booking._id}
     id={`booking-${booking._id}`}
-    className={
-      selectedBookingId === booking._id
-        ? "bg-amber-100 ring-2 ring-inset ring-amber-400"
-        : isZeroDiscount
-          ? "bg-amber-50 hover:bg-amber-100 transition-colors"
-          : "bg-white hover:bg-gray-50 transition-colors"
-    }
+    
+className={[
+  "transition-colors",
+  booking.status === "cancelled"
+    ? "bg-red-50/70 "
+    : selectedBookingId === booking._id
+      ? "bg-amber-100 ring-2 ring-inset ring-amber-400"
+      : isZeroDiscount
+        ? "bg-amber-50 hover:bg-amber-100"
+        : "bg-white hover:bg-gray-50",
+].join(" ")}
+
   >
 
-                      {/* NAME */}
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-800">
-                          {booking.contactName}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {booking.contactPhone}
-                        </div>
-                      </td>
-                      {/* EVENT */}
-                      <td className="px-4 py-3 text-gray-600">
-                        {booking.eventType}
-                      </td>
-                      {/* DATE */}
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {new Date(
-                          booking.eventDate
-                        ).toLocaleDateString("en-IN")}
-                      </td>
-                      {/* PACKAGE */}
-                      <td className="px-4 py-3 min-w-[180px]">
-  <p className="font-semibold text-gray-800">
-    {booking.package?.name || "-"}
-  </p>
-  <div className="mt-1 space-y-1 text-xs">
-    <p className="text-gray-500">
-      Original: ₹{originalAmount.toLocaleString("en-IN")}
-    </p>
-    <p className={discountAmount > 0 ? "text-amber-700" : "text-gray-500"}>
-      Discount: −₹{discountAmount.toLocaleString("en-IN")}
-    </p>
-    <p className="font-semibold text-green-700">
-      Payable: ₹{payableAmount.toLocaleString("en-IN")}
-    </p>
+                     {/* NAME */}
+<td className="px-4 py-3">
+  <div className={`font-medium text-gray-800 ${cancelledTextClass}`}>
+    {booking.contactName}
+  </div>
+
+  <div className={`text-xs text-gray-400 ${cancelledTextClass}`}>
+    {booking.contactPhone}
   </div>
 </td>
-                      {/* PAID AMOUNT */}
-<td className="px-4 py-3 font-medium text-green-600 whitespace-nowrap">
-  ₹{totalPaid.toLocaleString("en-IN")}
+                      {/* EVENT */}
+<td className="px-4 py-3 text-gray-600">
+  <span className={cancelledTextClass}>
+    {booking.eventType}
+  </span>
 </td>
-                     {/* REMAINING AMOUNT */}
+                     {/* DATE */}
+<td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+  <span className={cancelledTextClass}>
+    {new Date(booking.eventDate).toLocaleDateString("en-IN")}
+  </span>
+</td>
+                      {/* PACKAGE */}
+<td className="px-4 py-3 min-w-[180px]">
+  <div className={cancelledTextClass}>
+    <p className="font-semibold text-gray-800">
+      {booking.package?.name || "-"}
+    </p>
+
+    <div className="mt-1 space-y-1 text-xs">
+      <p className="text-gray-500">
+        Original: ₹{originalAmount.toLocaleString("en-IN")}
+      </p>
+
+      <p className={discountAmount > 0 ? "text-amber-700" : "text-gray-500"}>
+        Discount: −₹{discountAmount.toLocaleString("en-IN")}
+      </p>
+
+      <p className="font-semibold text-green-700">
+        Payable: ₹{payableAmount.toLocaleString("en-IN")}
+      </p>
+    </div>
+  </div>
+</td>
+                     {/* PAID AMOUNT */}
+<td className="px-4 py-3 font-medium text-green-600 whitespace-nowrap">
+  <span className={cancelledTextClass}>
+    ₹{totalPaid.toLocaleString("en-IN")}
+  </span>
+</td>
+                    {/* REMAINING AMOUNT */}
 <td className="px-4 py-3 font-medium text-orange-600 whitespace-nowrap">
-  ₹{remainingAmount.toLocaleString("en-IN")}
+  <span className={cancelledTextClass}>
+    ₹{remainingAmount.toLocaleString("en-IN")}
+  </span>
 </td>
                       {/* ==============================
                           STATUS DROPDOWN
                       ============================== */}
                       <td className="px-4 py-3">
                         <select
-                          value={booking.status}
-                          disabled={updateStatus.isLoading}
+  value={booking.status}
+  disabled={
+    updateStatus.isLoading ||
+    cancelBookingMutation.isLoading ||
+    ["cancelled", "completed"].includes(booking.status)
+  }
                           onChange={(e) =>
                             handleStatusChange(
                               booking,
@@ -348,7 +487,43 @@ return (
                           <option value="rejected">
                             Rejected
                           </option>
+                          <option value="cancelled">
+  Cancelled
+</option>
+
+<option value="completed" disabled>
+  Completed
+</option>
                         </select>
+                        {booking.status === "cancelled" && booking.cancellationDetails && (
+  <div className="mt-2 min-w-[180px] text-xs space-y-1">
+    <p>
+      <span className="text-gray-500">Paid:</span>{" "}
+      ₹{Number(
+        booking.cancellationDetails.amountPaidAtCancellation || 0
+      ).toLocaleString("en-IN")}
+    </p>
+
+    <p className="text-red-600">
+      <span>Non-refundable:</span>{" "}
+      ₹{Number(
+        booking.cancellationDetails.nonRefundableAmount || 0
+      ).toLocaleString("en-IN")}
+    </p>
+
+    <p className="text-amber-700">
+      <span>Office settlement:</span>{" "}
+      ₹{Number(
+        booking.cancellationDetails.amountToSettle || 0
+      ).toLocaleString("en-IN")}
+    </p>
+
+    <p className="capitalize text-gray-500">
+      Settlement status:{" "}
+      {booking.cancellationDetails.settlementStatus || "pending"}
+    </p>
+  </div>
+)}
                       </td>
 {/* ==============================
     ACTION BUTTONS
@@ -370,14 +545,18 @@ return (
     >
       {isConfirmed ? "Manage" : "Confirm First"}
     </button>
-    {/* DELETE */}
-    <button
-      onClick={() => handleDelete(booking)}
-      disabled={deleteBooking.isLoading}
-      className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
-    >
-      {deleteBooking.isLoading ? "Deleting..." : "Delete"}
-    </button>
+   
+    {/* DELETE ICON */}
+<button
+  type="button"
+  onClick={() => handleDelete(booking)}
+  disabled={deleteBooking.isLoading}
+  title="Delete booking"
+  aria-label={`Delete booking for ${booking.contactName || "customer"}`}
+  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-500 transition-colors hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+>
+  <FaTrash size={14} />
+</button>
   </div>
 </td>
                     </tr>

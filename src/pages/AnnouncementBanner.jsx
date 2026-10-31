@@ -192,7 +192,7 @@ export default function AnnouncementBanner() {
   if (!announcements.length) return null;
 
   return (
-    <div className="w-full">
+    <div className="sticky top-[108px] z-[900] w-full">
       {announcements.map((announcement) => (
         <ScrollingAnnouncement
           key={announcement._id}

@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "react-query";
+import Swal from "sweetalert2";
+import { FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import {
   FaCalendarCheck,
@@ -374,6 +376,19 @@ export default function AdminHome() {
       )
       .slice(0, 3);
   }, [bookings]);
+  // Cancelled bookings
+const cancelledBookings = useMemo(() => {
+  return bookings
+    .filter(
+      (booking) =>
+        String(booking?.status || "").toLowerCase() === "cancelled"
+    )
+    .sort(
+      (a, b) =>
+        new Date(getBookingDate(b) || 0) -
+        new Date(getBookingDate(a) || 0)
+    );
+}, [bookings]);
 
   const statusCards = [
     {
@@ -410,6 +425,45 @@ export default function AdminHome() {
     refetchStats();
     refetchBookings();
   };
+  // Delete cancelled booking
+const handleDeleteCancelledBooking = async (booking) => {
+  const result = await Swal.fire({
+    title: "Delete Cancelled Booking?",
+    text: `Booking of ${booking.contactName || "this customer"} will be permanently deleted. This cannot be undone.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, Delete",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: "#dc2626",
+    cancelButtonColor: "#64748b",
+    reverseButtons: true,
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await api.delete(`/bookings/admin/${booking._id}`);
+
+    await refetchBookings();
+    await refetchStats();
+
+    Swal.fire({
+      icon: "success",
+      title: "Deleted!",
+      text: "Cancelled booking has been deleted.",
+      confirmButtonColor: "#c58b00",
+    });
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Delete Failed",
+      text:
+        error.response?.data?.message ||
+        "Unable to delete booking.",
+      confirmButtonColor: "#dc2626",
+    });
+  }
+};
 
   const showValue = (loading, value) =>
     loading ? "…" : value;
@@ -668,6 +722,408 @@ export default function AdminHome() {
           </Panel>
         </section>
 
+{/* COMPLETE CANCELLED BOOKING HISTORY */}
+<Panel
+  title={`Cancelled Booking History (${cancelledBookings.length})`}
+  icon={<FaBan />}
+  action={
+    <button
+      type="button"
+      onClick={() => navigate("/admin/bookings")}
+      className="text-sm font-bold text-amber-700 hover:text-amber-900"
+    >
+      Manage Bookings →
+    </button>
+  }
+>
+  {bookingsLoading ? (
+    <p className="py-8 text-center text-slate-500">
+      Loading cancelled bookings...
+    </p>
+  ) : bookingsError ? (
+    <p className="py-8 text-center text-rose-600">
+      Unable to load cancelled bookings.
+    </p>
+  ) : cancelledBookings.length === 0 ? (
+    <p className="py-8 text-center text-slate-500">
+      No cancelled bookings found.
+    </p>
+  ) : (
+    <div className="space-y-5">
+      {cancelledBookings.map((booking) => {
+        const cancellation = booking.cancellationDetails || {};
+
+        const customerName =
+          booking.contactName ||
+          booking.user?.name ||
+          booking.customerName ||
+          "Customer";
+
+        const phone =
+          booking.contactPhone ||
+          booking.user?.phone ||
+          booking.phone ||
+          "—";
+
+        const createdAt = booking.createdAt
+          ? new Date(booking.createdAt)
+          : null;
+
+        const cancelledAt = cancellation.cancelledAt
+          ? new Date(cancellation.cancelledAt)
+          : null;
+
+        const eventDate = booking.eventDate
+          ? new Date(booking.eventDate)
+          : null;
+
+        const validDate = (date) =>
+          date && !Number.isNaN(date.getTime())
+            ? date.toLocaleString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "Not available";
+
+        const originalAmount = getNumber(booking, [
+          "originalAmount",
+          "package.price",
+          "totalAmount",
+        ]);
+
+        const discount = getNumber(booking, [
+          "discountAmount",
+        ]);
+
+        const payable = getBookingTotal(booking);
+
+        const paid = getNumber(cancellation, [
+          "amountPaidAtCancellation",
+        ]);
+
+        const nonRefundable = getNumber(cancellation, [
+          "nonRefundableAmount",
+        ]);
+
+        const officeSettlement = getNumber(cancellation, [
+          "amountToSettle",
+        ]);
+
+        const settledAmount = getNumber(cancellation, [
+          "settledAmount",
+        ]);
+
+        const remaining = Math.max(payable - paid, 0);
+
+        return (
+          <div
+            key={booking._id}
+            className="overflow-hidden rounded-xl border border-rose-200 bg-white"
+          >
+            {/* CUSTOMER HEADER */}
+            <div className="flex flex-col justify-between gap-3 bg-rose-50 p-4 sm:flex-row sm:items-center">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {customerName}
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-600">
+                  Phone: {phone}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Booking ID:{" "}
+                  {booking.bookingNumber || booking._id}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-rose-100 px-3 py-1.5 text-xs font-bold uppercase text-rose-700">
+                  Cancelled
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDeleteCancelledBooking(booking)
+                  }
+                  title="Delete cancelled booking"
+                  aria-label="Delete cancelled booking"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-600 hover:text-white"
+                >
+                  <FaTrash />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4">
+
+              {/* BOOKING TIMELINE */}
+              <div>
+                <h4 className="mb-3 font-bold text-slate-800">
+                  Booking Timeline
+                </h4>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Booking Created
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      {validDate(createdAt)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Event Date
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      {validDate(eventDate)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-rose-50 p-3">
+                    <p className="text-xs text-rose-600">
+                      Booking Cancelled
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-rose-700">
+                      {validDate(cancelledAt)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* EVENT DETAILS */}
+              <div>
+                <h4 className="mb-3 font-bold text-slate-800">
+                  Booking Details
+                </h4>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      Event Type
+                    </p>
+                    <p className="font-semibold text-slate-800">
+                      {booking.eventType || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      Package
+                    </p>
+                    <p className="font-semibold text-slate-800">
+                      {booking.package?.name ||
+                        booking.packageName ||
+                        "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      Guest Count
+                    </p>
+                    <p className="font-semibold text-slate-800">
+                      {booking.guestCount ?? "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* PAYMENT BREAKDOWN */}
+              <div>
+                <h4 className="mb-3 font-bold text-slate-800">
+                  Payment & Financial Breakdown
+                </h4>
+
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Original Amount
+                    </p>
+                    <p className="mt-1 font-bold text-slate-800">
+                      {money(originalAmount)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Discount
+                    </p>
+                    <p className="mt-1 font-bold text-amber-700">
+                      {money(discount)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Payable Amount
+                    </p>
+                    <p className="mt-1 font-bold text-slate-800">
+                      {money(payable)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-emerald-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Paid at Cancellation
+                    </p>
+                    <p className="mt-1 font-bold text-emerald-700">
+                      {money(paid)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-rose-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Non-refundable
+                    </p>
+                    <p className="mt-1 font-bold text-rose-700">
+                      {money(nonRefundable)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-amber-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Office Settlement
+                    </p>
+                    <p className="mt-1 font-bold text-amber-700">
+                      {money(officeSettlement)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-blue-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Settled Amount
+                    </p>
+                    <p className="mt-1 font-bold text-blue-700">
+                      {money(settledAmount)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Unpaid Booking Balance
+                    </p>
+                    <p className="mt-1 font-bold text-slate-800">
+                      {money(remaining)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CANCELLATION INFORMATION */}
+              <div className="rounded-lg border border-rose-100 bg-rose-50/50 p-3">
+                <h4 className="font-bold text-slate-800">
+                  Cancellation Information
+                </h4>
+
+                <p className="mt-2 text-sm text-slate-600">
+                  Reason:{" "}
+                  <span className="font-medium text-slate-900">
+                    {cancellation.reason || "No reason provided"}
+                  </span>
+                </p>
+
+                <p className="mt-2 text-sm text-slate-600">
+                  Settlement Status:{" "}
+                  <span className="font-bold capitalize text-amber-700">
+                    {cancellation.settlementStatus || "Not available"}
+                  </span>
+                </p>
+
+                <p className="mt-2 text-sm text-slate-600">
+                  Cancelled By:{" "}
+                  <span className="font-medium text-slate-900">
+                    {cancellation.cancelledBy?.name ||
+                      cancellation.cancelledBy ||
+                      "Not available"}
+                  </span>
+                </p>
+              </div>
+
+              {/* REVENUE IMPACT */}
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <h4 className="font-bold text-slate-800">
+                  Revenue Impact
+                </h4>
+
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      Cancelled Booking Value
+                    </p>
+                    <p className="font-bold text-slate-900">
+                      {money(payable)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      Non-refundable Policy Amount
+                    </p>
+                    <p className="font-bold text-rose-700">
+                      {money(nonRefundable)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      Pending Settlement
+                    </p>
+                    <p className="font-bold text-amber-700">
+                      {money(
+                        Math.max(officeSettlement - settledAmount, 0)
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-xs text-slate-500">
+                  Cancelled booking value is excluded from active
+                  booking revenue. Non-refundable amount is shown
+                  separately and should not be treated as received
+                  revenue until your accounting confirms it.
+                </p>
+              </div>
+
+              {/* REPLACEMENT INFORMATION */}
+              <div className="rounded-lg border border-slate-200 p-3">
+                <h4 className="font-bold text-slate-800">
+                  Replacement Booking
+                </h4>
+                <p className="mt-2 text-sm text-slate-500">
+                  Replacement booking information is not available
+                  in the current booking record.
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  A replacement booking reference and amount need
+                  to be saved by the backend to calculate this.
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/admin/bookings?bookingId=${booking._id}`)
+                  }
+                  className="rounded-lg border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+                >
+                  Open in Manage Bookings
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</Panel>
         {/* Quick Actions */}
         <Panel
           title="Quick Actions"

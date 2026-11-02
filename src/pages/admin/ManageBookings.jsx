@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { FaTrash } from "react-icons/fa";
+import { FaTrash, FaFileExcel } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import { useNavigate, useLocation} from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import api from "../../services/api";
@@ -254,39 +255,198 @@ const handleDelete = async (booking) => {
   }
   deleteBooking.mutate(booking._id);
 };
+const handleExportExcel = async () => {
+  try {
+    toast.loading("Preparing Excel export...", {
+      id: "booking-export",
+    });
+
+    // Fetch ALL bookings, without applying the status filter
+    const response = await api.get("/bookings/admin/export-all");
+
+    const bookings = response.data?.bookings || [];
+
+    if (!bookings.length) {
+      toast.error("No bookings available to export.", {
+        id: "booking-export",
+      });
+      return;
+    }
+
+    // SHEET 1: ALL BOOKINGS
+    const bookingRows = bookings.map((booking) => {
+      const successfulPayments = (
+        booking.paymentHistory || []
+      ).filter((payment) => payment.status === "success");
+
+      const totalPaid = successfulPayments.reduce(
+        (sum, payment) => sum + Number(payment.amount || 0),
+        0
+      );
+
+      const originalAmount = Number(
+        booking.originalAmount ??
+        booking.totalAmount ??
+        booking.package?.price ??
+        0
+      );
+
+      const discountAmount = Number(
+        booking.discountAmount ?? 0
+      );
+
+      const payableAmount = Number(
+        booking.payableAmount ??
+        booking.totalAmount ??
+        Math.max(originalAmount - discountAmount, 0)
+      );
+
+      const remainingAmount = Math.max(
+        payableAmount - totalPaid,
+        0
+      );
+
+      return {
+        "Booking ID": booking.bookingNumber || booking._id || "",
+        "Customer Name": booking.contactName || "",
+        "Phone": booking.contactPhone || "",
+        "Email": booking.contactEmail || "",
+        "Event Type": booking.eventType || "",
+        "Event Date": booking.eventDate
+          ? new Date(booking.eventDate).toLocaleDateString("en-IN")
+          : "",
+        "Guest Count": booking.guestCount ?? "",
+        "Package": booking.package?.name || "",
+        "Original Amount": originalAmount,
+        "Discount Amount": discountAmount,
+        "Payable Amount": payableAmount,
+        "Total Paid": totalPaid,
+        "Remaining Amount": remainingAmount,
+        "Booking Status": booking.status || "",
+        "Created At": booking.createdAt
+          ? new Date(booking.createdAt).toLocaleString("en-IN")
+          : "",
+        "Cancellation Reason":
+          booking.cancellationDetails?.reason || "",
+        "Amount Paid at Cancellation": Number(
+          booking.cancellationDetails?.amountPaidAtCancellation || 0
+        ),
+        "Non-refundable Amount": Number(
+          booking.cancellationDetails?.nonRefundableAmount || 0
+        ),
+        "Amount to Settle": Number(
+          booking.cancellationDetails?.amountToSettle || 0
+        ),
+        "Settlement Status":
+          booking.cancellationDetails?.settlementStatus || "",
+      };
+    });
+
+    // SHEET 2: COMPLETE PAYMENT HISTORY
+    const paymentRows = [];
+
+    bookings.forEach((booking) => {
+      (booking.paymentHistory || []).forEach((payment, index) => {
+        paymentRows.push({
+          "Booking ID": booking.bookingNumber || booking._id || "",
+          "Customer Name": booking.contactName || "",
+          "Phone": booking.contactPhone || "",
+          "Payment Number": index + 1,
+          "Amount": Number(payment.amount || 0),
+          "Source": payment.source || "",
+          "Payment Method": payment.paymentMethod || "",
+          "Transaction ID": payment.transactionId || "",
+          "Payment Status": payment.status || "",
+          "Collected By": payment.collectedBy || "",
+          "Payment Date": payment.paidAt
+            ? new Date(payment.paidAt).toLocaleString("en-IN")
+            : "",
+          "Note": payment.note || "",
+        });
+      });
+    });
+
+    // CREATE EXCEL WORKBOOK
+    const workbook = XLSX.utils.book_new();
+
+    const bookingsSheet = XLSX.utils.json_to_sheet(bookingRows);
+    const paymentsSheet = XLSX.utils.json_to_sheet(paymentRows);
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      bookingsSheet,
+      "All Bookings"
+    );
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      paymentsSheet,
+      "Payment History"
+    );
+
+    // DOWNLOAD EXCEL
+    XLSX.writeFile(
+      workbook,
+      `KD-Utsav-Bookings-${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+
+    toast.success(
+      `${bookings.length} bookings exported successfully.`,
+      { id: "booking-export" }
+    );
+
+  } catch (error) {
+    console.error("Booking export error:", error);
+
+    toast.error(
+      error.response?.data?.message ||
+      "Failed to export bookings.",
+      { id: "booking-export" }
+    );
+  }
+};
   return (
     <div className="p-8">
       {/* ==============================
           HEADER
       ============================== */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
-        <h1 className="text-2xl font-serif font-bold text-gray-800">
-          Manage Bookings
-        </h1>
-        {/* FILTER */}
-        <div className="flex gap-2 flex-wrap">
-          {[
-            "",
-            "pending",
-            "confirmed",
-            "rejected",
-            "cancelled",
-            "completed",
-          ].map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
-                statusFilter === status
-                  ? "bg-gold text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100 border"
-              }`}
-            >
-              {status || "All"}
-            </button>
-          ))}
-        </div>
-      </div>
+  <h1 className="text-2xl font-serif font-bold text-gray-800">
+    Manage Bookings
+  </h1>
+
+  <div className="flex flex-wrap items-center gap-2">
+    <button
+      type="button"
+      onClick={handleExportExcel}
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
+    >
+      <FaFileExcel size={16} />
+      Export to Excel
+    </button>
+
+    {[
+      "",
+      "pending",
+      "confirmed",
+      "rejected",
+      "cancelled",
+      "completed",
+    ].map((status) => (
+      <button
+        key={status}
+        onClick={() => setStatusFilter(status)}
+        className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
+          statusFilter === status
+            ? "bg-gold text-white"
+            : "bg-white text-gray-600 hover:bg-gray-100 border"
+        }`}
+      >
+        {status || "All"}
+      </button>
+    ))}
+  </div>
+</div>
       {/* ==============================
           LOADING
       ============================== */}

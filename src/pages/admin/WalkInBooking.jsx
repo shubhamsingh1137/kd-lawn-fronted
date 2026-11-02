@@ -569,6 +569,14 @@ await Swal.fire({
 
     "flex items-center gap-2 text-sm font-medium text-gray-700";
 
+    console.log("Walk-in Booking Debug:", {
+  submitting,
+  loadingPackages,
+  loadingBookedDates,
+  packagesLength: packages.length,
+  packages,
+});
+
   return (
 
     <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8">

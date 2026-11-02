@@ -277,14 +277,20 @@ export default function AdminHome() {
       )?.count || 0
     );
 
-  const totalBookings = Number(
-    stats.total ??
-      stats.totalBookings ??
-      statusStats.reduce(
-        (sum, item) => sum + Number(item?.count || 0),
-        0
-      )
-  );
+  const totalBookings = statusStats.length
+  ? statusStats.reduce((sum, item) => {
+      const status = String(item?._id || "").toLowerCase();
+
+      if (status === "cancelled") {
+        return sum;
+      }
+
+      return sum + Number(item?.count || 0);
+    }, 0)
+  : bookings.filter(
+      (booking) =>
+        String(booking?.status || "").toLowerCase() !== "cancelled"
+    ).length;
 
   const pendingCount = countFor("pending");
   const confirmedCount = countFor("confirmed");
